@@ -540,11 +540,11 @@ export default function Home() {
                         <SectionHeader
                             eyebrow="Overview"
                             title="Open-Source CRM for Developers"
-                            description="openCRM is an open-source, metadata-driven, multi-tenant CRM learning project for developers. It shows how objects, fields, pages, apps, permissions, and workflows can be shaped through configuration instead of being hardcoded into the product."
+                            description="AuraCRM is an open-source, metadata-driven, multi-tenant CRM learning project for developers. It shows how objects, fields, pages, apps, permissions, and workflows can be shaped through configuration instead of being hardcoded into the product."
                         />
                        
                         <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-                            <a href="https://github.com/ayas-ab/openCRM" target="_blank" rel="noopener noreferrer">
+                            <a href="https://github.com/ayas-ab/AuraCRM" target="_blank" rel="noopener noreferrer">
                                 <Button variant="outline" size="lg" className="cursor-pointer rounded-full border-amber-400 bg-amber-300 px-6 py-4 text-sm font-semibold text-amber-950 shadow-md shadow-amber-200/80 transition-all duration-300 hover:-translate-y-1 hover:border-amber-500 hover:bg-amber-200 hover:text-amber-950 hover:shadow-lg hover:shadow-amber-200">
                                     <Github className="mr-2 h-5 w-5" />
                                     View Source Code / Download
@@ -618,7 +618,7 @@ export default function Home() {
                         <SectionHeader
                             eyebrow="Tech Stack"
                             title="Core technologies used in the project"
-                            description="openCRM uses a straightforward TypeScript web stack: Next.js and React for the app, Prisma and PostgreSQL for data, NextAuth for authentication, and a small set of supporting libraries for UI, jobs, validation, and state."
+                            description="AuraCRM uses a straightforward TypeScript web stack: Next.js and React for the app, Prisma and PostgreSQL for data, NextAuth for authentication, and a small set of supporting libraries for UI, jobs, validation, and state."
                         />
                         <div className="mt-14 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
                             {techStackGroups.map((group) => {
@@ -683,7 +683,7 @@ export default function Home() {
                                     </h3>
                                 </div>
                                 <p className="mt-4 max-w-4xl text-sm text-slate-600 sm:text-base leading-relaxed">
-                                    openCRM uses two runtime user roles. Both roles are authenticated users inside the same tenant and both are constrained by object permissions and row-level ownership/share logic.
+                                    AuraCRM uses two runtime user roles. Both roles are authenticated users inside the same tenant and both are constrained by object permissions and row-level ownership/share logic.
                                 </p>
                             </div>
                             <div className="grid gap-4 p-5 sm:grid-cols-3 sm:p-8">

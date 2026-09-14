@@ -47,7 +47,7 @@ export function CleanMinimalRegister({
                     </div>
                 </div>
 
-                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Create your openCRM account</h1>
+                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Create your AuraCRM account</h1>
                 <p className="mb-6 text-center text-sm text-slate-500">
                     Set up your organization and admin account in one step.
                 </p>

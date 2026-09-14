@@ -22,7 +22,6 @@ import { GlobalSearch } from "@/components/standard/layout/global-search";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import * as Icons from "lucide-react";
-import { Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsMenu } from "@/components/standard/layout/notifications-menu";
 import { signOut } from "next-auth/react";
@@ -55,10 +54,8 @@ export function AppHeader({ apps, currentAppApiName, user, navItems, isAdmin, pr
             <header className="sticky top-0 z-20 border-b border-border bg-white">
                 <div className="flex h-16 items-center justify-between px-6">
                     <div className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
-                        <div className="bg-primary rounded-lg p-1.5 shadow-sm text-primary-foreground">
-                            <Cloud className="w-5 h-5" />
-                        </div>
-                        <span>openCRM</span>
+                        <img src="/logo.png" alt="AuraCRM" className="h-6 w-6" />
+                        <span>AuraCRM</span>
                     </div>
                 </div>
             </header>
@@ -79,10 +76,8 @@ export function AppHeader({ apps, currentAppApiName, user, navItems, isAdmin, pr
                         href={defaultAppApiName ? `/app/${defaultAppApiName}/dashboard` : "/app/dashboard"}
                         className="flex shrink-0 items-center gap-2 font-bold text-xl tracking-tight text-foreground transition-opacity hover:opacity-80"
                     >
-                        <div className="bg-primary rounded-lg p-1.5 shadow-sm text-primary-foreground">
-                            <Cloud className="w-5 h-5" />
-                        </div>
-                        <span>openCRM</span>
+                        <img src="/logo.png" alt="AuraCRM" className="h-6 w-6" />
+                        <span>AuraCRM</span>
                     </Link>
 
                     <div className="hidden h-6 w-px bg-border lg:block"></div>

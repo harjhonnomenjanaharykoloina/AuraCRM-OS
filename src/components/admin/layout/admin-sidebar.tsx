@@ -11,7 +11,6 @@ import {
     Users,
     Shield,
     ArrowLeft,
-    Command,
     Inbox,
     ListChecks,
     Share2,
@@ -30,10 +29,8 @@ export function AdminSidebar() {
             {/* Header / Brand */}
             <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
                 <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-                    <div className="bg-sidebar-primary rounded-lg p-1.5 text-sidebar-primary-foreground">
-                        <Command className="w-5 h-5" />
-                    </div>
-                    <span>openCRM</span>
+                    <img src="/logo.png" alt="AuraCRM" className="h-6 w-6" />
+                    <span>AuraCRM</span>
                     <span className="text-xs font-normal text-sidebar-foreground/70 ml-1 py-0.5 px-1.5 bg-sidebar-accent rounded">
                         Admin
                     </span>

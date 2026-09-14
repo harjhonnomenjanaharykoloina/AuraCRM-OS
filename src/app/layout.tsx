@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "openCRM — Open Source CRM",
+  title: "AuraCRM — Open Source CRM",
   description:
-    "openCRM is an open-source learning project for building a modern, metadata-driven CRM.",
+    "AuraCRM is an open-source learning project for building a modern, metadata-driven CRM.",
 };
 
 import { Providers } from "@/components/providers";

@@ -1119,7 +1119,7 @@ export async function updateFieldDefinition(fieldId: number, data: z.infer<typeo
                 data: {
                     label: validated.label,
                     // Note: Changing type or apiName is risky and usually blocked in real CRMs.
-                    // For this openCRM, we'll allow label, required, and options changes.
+                    // For this AuraCRM, we'll allow label, required, and options changes.
                     // Lookup target is immutable after creation.
                     // We will NOT allow changing API Name or Type to keep it simple and safe for now.
                     required: fieldType === "AutoNumber" ? false : validated.required,

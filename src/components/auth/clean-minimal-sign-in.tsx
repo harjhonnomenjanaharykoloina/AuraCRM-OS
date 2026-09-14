@@ -41,7 +41,7 @@ export function CleanMinimalSignIn({
                     </div>
                 </div>
 
-                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Sign in to openCRM</h1>
+                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Sign in to AuraCRM</h1>
                 <p className="mb-6 text-center text-sm text-slate-500">
                     Use your username and password to access your workspace.
                 </p>
