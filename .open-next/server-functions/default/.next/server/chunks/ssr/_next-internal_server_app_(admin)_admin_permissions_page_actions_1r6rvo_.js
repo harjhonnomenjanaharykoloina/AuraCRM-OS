@@ -1,3 +1,0 @@
-module.exports=[403364,a=>a.a(async(b,c)=>{try{var d=a.i(884742),e=b([d]);[d]=e.then?(await e)():e,a.s([]),c()}catch(a){c(a)}},!1),654802,a=>a.a(async(b,c)=>{try{var d=a.i(403364),e=a.i(884742),f=b([d,e]);[d,e]=f.then?(await f)():f,a.s(["40d4d60e0572c4585addf8707e717158ee49f45cca",()=>e.createPermissionSet]),c()}catch(a){c(a)}},!1)];
-
-//# sourceMappingURL=_next-internal_server_app_%28admin%29_admin_permissions_page_actions_1r6rvo_.js.map

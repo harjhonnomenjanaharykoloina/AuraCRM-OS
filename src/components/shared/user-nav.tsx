@@ -16,7 +16,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
-import { signOut } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 interface UserNavProps {
     user: {
@@ -28,6 +29,14 @@ interface UserNavProps {
 }
 
 export function UserNav({ user, profileHref }: UserNavProps) {
+    const router = useRouter();
+
+    const handleSignOut = async () => {
+        await authClient.signOut();
+        router.push("/login");
+        router.refresh();
+    };
+
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -59,7 +68,7 @@ export function UserNav({ user, profileHref }: UserNavProps) {
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                <DropdownMenuItem onClick={handleSignOut}>
                     Log out
                 </DropdownMenuItem>
             </DropdownMenuContent>

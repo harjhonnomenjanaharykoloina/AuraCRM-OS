@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { CleanMinimalSignIn } from "@/components/auth/clean-minimal-sign-in";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -12,7 +12,7 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
-    const normalizedUsername = username.trim();
+    const normalizedUsername = username.trim().toLowerCase();
     const canSubmit = normalizedUsername.length > 0 && password.length > 0;
 
     const submitLogin = async () => {
@@ -27,20 +27,14 @@ export default function LoginPage() {
         setError(null);
 
         try {
-            const result = await signIn("credentials", {
+            const result = await authClient.signIn.username({
                 username: normalizedUsername,
                 password,
-                redirect: false,
             });
 
-            if (result?.error) {
-                const normalized = result.error?.toLowerCase() ?? "";
-                const isBadCredentials = normalized.includes("credential") || normalized.includes("invalid");
-                const errorMessage = isBadCredentials
-                    ? "Invalid username or password"
-                    : "Authentication failed. Please check your credentials.";
-                setError(errorMessage);
-                toast.error(errorMessage);
+            if (result.error) {
+                setError("Invalid username or password");
+                toast.error("Invalid username or password");
             } else {
                 toast.success("Logged in successfully");
                 router.push("/app/dashboard");

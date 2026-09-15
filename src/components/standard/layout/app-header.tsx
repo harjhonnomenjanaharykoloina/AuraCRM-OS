@@ -24,7 +24,8 @@ import { cn } from "@/lib/utils";
 import * as Icons from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsMenu } from "@/components/standard/layout/notifications-menu";
-import { signOut } from "next-auth/react";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 interface AppHeaderProps {
     apps: any[];
@@ -37,6 +38,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ apps, currentAppApiName, user, navItems, isAdmin, profileHref }: AppHeaderProps) {
     const pathname = usePathname();
+    const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
 
     // Only render on client to avoid hydration mismatch with Radix UI IDs
@@ -212,7 +214,7 @@ export function AppHeader({ apps, currentAppApiName, user, navItems, isAdmin, pr
                                         </Link>
                                     </DropdownMenuItem>
                                 ) : null}
-                                <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                                <DropdownMenuItem onClick={async () => { await authClient.signOut(); router.push("/login"); router.refresh(); }}>
                                     <Icons.LogOut className="mr-2 h-4 w-4" />
                                     Log out
                                 </DropdownMenuItem>

@@ -45,3 +45,6 @@ next-env.d.ts
 .claude
 .agents
 .agent/skills
+
+# OpenNext / Cloudflare build artifacts
+/.open-next/

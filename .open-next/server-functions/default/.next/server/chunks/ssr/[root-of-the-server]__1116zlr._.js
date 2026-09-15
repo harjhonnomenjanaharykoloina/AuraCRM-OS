@@ -1,3 +1,0 @@
-module.exports=[666680,(a,b,c)=>{b.exports=a.x("node:crypto",()=>require("node:crypto"))},865547,a=>a.a(async(b,c)=>{try{var d=a.i(679877),e=b([d]);[d]=e.then?(await e)():e,a.s([]),c()}catch(a){c(a)}},!1),385549,a=>a.a(async(b,c)=>{try{var d=a.i(865547),e=a.i(679877),f=b([d,e]);[d,e]=f.then?(await f)():f,a.s(["4023ecd7df6382ae686ff9e5c49c49ba22a53c25d3",()=>e.inviteUser]),c()}catch(a){c(a)}},!1),509195,a=>{"use strict";var b=a.i(388588);let c="sharing-rule.recompute";async function d(a){let d=await (0,b.getBoss)();await d.createQueue(c);let e=`${a.organizationId}:${a.objectDefId}`;await d.send(c,a,{singletonKey:e})}a.s(["enqueueSharingRuleRecompute",0,d])}];
-
-//# sourceMappingURL=%5Broot-of-the-server%5D__1116zlr._.js.map

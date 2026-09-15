@@ -1,76 +1,80 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
+import bcryptjs from "bcryptjs"
+import { betterAuth } from "better-auth"
+import { prismaAdapter } from "@better-auth/prisma-adapter"
+import { username } from "better-auth/plugins/username"
+import { toNextJsHandler } from "better-auth/next-js"
+import { db } from "@/lib/db"
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
-    providers: [
-        Credentials({
-            credentials: {
-                username: { label: "Username", type: "text" },
-                password: { label: "Password", type: "password" },
+export const betterAuthInstance = betterAuth({
+    database: prismaAdapter(db, {
+        provider: "postgresql",
+    }),
+    emailAndPassword: {
+        enabled: true,
+        autoSignIn: true,
+        password: {
+            hash: async (password: string) => {
+                return bcryptjs.hash(password, 12)
             },
-            async authorize(credentials) {
-                if (!credentials?.username || !credentials?.password) {
-                    return null;
-                }
-
-                const normalizedUsername = (credentials.username as string)
-                    .trim()
-                    .toLowerCase();
-
-                const user = await db.user.findUnique({
-                    where: { username: normalizedUsername },
-                });
-
-                if (!user || !user.password) {
-                    return null;
-                }
-
-                const isPasswordValid = await bcrypt.compare(
-                    credentials.password as string,
-                    user.password
-                );
-
-                if (!isPasswordValid) {
-                    return null;
-                }
-
-                return {
-                    id: user.id.toString(),
-                    email: user.email,
-                    name: user.name,
-                    username: user.username,
-                    organizationId: user.organizationId,
-                    userType: user.userType,
-                };
+            verify: async (data: { hash: string; password: string }) => {
+                return bcryptjs.compare(data.password, data.hash)
             },
-        }),
-    ],
-    callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
-                token.id = user.id;
-                token.organizationId = (user as any).organizationId;
-                token.userType = (user as any).userType;
-                token.username = (user as any).username;
-            }
-            return token;
         },
-        async session({ session, token }) {
-            if (session.user) {
-                (session.user as any).id = token.id;
-                (session.user as any).organizationId = token.organizationId;
-                (session.user as any).userType = token.userType;
-                (session.user as any).username = token.username;
-            }
-            return session;
-        },
-    },
-    pages: {
-        signIn: "/login",
     },
     session: {
-        strategy: "jwt",
+        cookieCache: {
+            enabled: true,
+            strategy: "jwt",
+        },
+        additionalFields: {
+            organizationId: {
+                type: "number",
+                required: false,
+            },
+        },
     },
-});
+    user: {
+        additionalFields: {
+            organizationId: {
+                type: "number",
+                required: true,
+            },
+            userType: {
+                type: "string",
+                required: true,
+            },
+        },
+    },
+    plugins: [
+        username({
+            displayUsername: false,
+        }),
+    ],
+    secret: process.env.JWT_SECRET,
+})
+
+export const handlers = toNextJsHandler(betterAuthInstance)
+
+export async function auth() {
+    const { headers } = await import("next/headers")
+    return betterAuthInstance.api.getSession({ headers: await headers() })
+}
+
+export async function signIn(credentials?: { username: string; password: string }) {
+    if (!credentials) return null
+    try {
+        const result = await betterAuthInstance.api.signInUsername({
+            body: {
+                username: credentials.username,
+                password: credentials.password,
+            },
+        })
+        return result
+    } catch (error) {
+        return { error: error instanceof Error ? error.message : "An error occurred" }
+    }
+}
+
+export async function signOut() {
+    return betterAuthInstance.api.signOut()
+}

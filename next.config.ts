@@ -1,14 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["pg-cloudflare"],
   typescript: {
     // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
+    // Dangerously allow production builds to succeed even if
     // your project has type errors.
     // !! WARN !!
     //ignoreBuildErrors: true,
   },
+  serverExternalPackages: ["pg"],
   /* config options here */
 };
 
