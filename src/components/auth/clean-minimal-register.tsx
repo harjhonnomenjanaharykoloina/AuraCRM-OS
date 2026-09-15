@@ -47,6 +47,15 @@ export function CleanMinimalRegister({
                     </div>
                 </div>
 
+                {/* White-label logo */}
+                <div className="mb-4 flex justify-center">
+                    <img
+                        src={process.env.NEXT_PUBLIC_APP_LOGO || "/logo.png"}
+                        alt="App Logo"
+                        className="mx-auto max-h-12 w-auto object-contain"
+                    />
+                </div>
+
                 <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Create your AuraCRM account</h1>
                 <p className="mb-6 text-center text-sm text-slate-500">
                     Set up your organization and admin account in one step.
