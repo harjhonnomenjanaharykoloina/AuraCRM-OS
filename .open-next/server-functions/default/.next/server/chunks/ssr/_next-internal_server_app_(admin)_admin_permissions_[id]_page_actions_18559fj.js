@@ -1,0 +1,3 @@
+module.exports=[730314,a=>a.a(async(b,c)=>{try{var d=a.i(884742),e=b([d]);[d]=e.then?(await e)():e,a.s([]),c()}catch(a){c(a)}},!1),802850,a=>a.a(async(b,c)=>{try{var d=a.i(730314),e=a.i(884742),f=b([d,e]);[d,e]=f.then?(await f)():f,a.s(["7039602159ca698388b5e30fbf5fb9648d3c2f48e5",()=>e.toggleSystemPermission,"704645d4c7b96d58d7583ff7ff615679b7c57885aa",()=>e.toggleAppPermission,"7841162c7498ffd16757ae8844d99539ec9fb949ff",()=>e.togglePermission]),c()}catch(a){c(a)}},!1)];
+
+//# sourceMappingURL=_next-internal_server_app_%28admin%29_admin_permissions_%5Bid%5D_page_actions_18559fj.js.map
