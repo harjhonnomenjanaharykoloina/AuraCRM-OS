@@ -60,24 +60,6 @@ export async function auth() {
     return betterAuthInstance.api.getSession({ headers: await headers() })
 }
 
-export async function signIn(credentials?: { username: string; password: string }) {
-    if (!credentials) return null
-    try {
-        console.log("[AUTH][signIn] Attempting signInUsername for:", credentials.username)
-        const result = await betterAuthInstance.api.signInUsername({
-            body: {
-                username: credentials.username,
-                password: credentials.password,
-            },
-        })
-        console.log("[AUTH][signIn] Success - userId:", result?.user?.id)
-        return result
-    } catch (error) {
-        console.error("[AUTH][signIn] Error:", error instanceof Error ? error.message : String(error))
-        return { error: error instanceof Error ? error.message : "An error occurred" }
-    }
-}
-
 export async function signOut() {
     return betterAuthInstance.api.signOut()
 }

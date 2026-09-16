@@ -16,7 +16,8 @@
     "build:worker": "opennextjs-cloudflare build",
     "postinstall": "prisma generate",
     "seed": "tsx scripts/seed-admin.ts",
-    "seed:demo": "tsx scripts/seed-demo.ts"
+    "seed:demo": "tsx scripts/seed-demo.ts",
+    "fix:accounts": "tsx scripts/fix-accounts.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.5",
