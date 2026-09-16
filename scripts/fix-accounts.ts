@@ -22,14 +22,30 @@ async function main() {
     console.log(`Found ${accounts.length} account record(s) to fix.`);
 
     for (const account of accounts) {
-        await prisma.account.update({
-            where: { id: account.id },
-            data: {
+        const existing = await prisma.account.findFirst({
+            where: {
                 providerId: "credential",
                 accountId: String(account.userId),
             },
         });
-        console.log(`  Fixed account ${account.id} (userId: ${account.userId})`);
+
+        if (existing) {
+            // A credential record already exists for this user
+            // Delete the old username record to avoid duplicates
+            await prisma.account.delete({
+                where: { id: account.id },
+            });
+            console.log(`  Deleted duplicate username account ${account.id} (userId: ${account.userId}) — credential record already exists`);
+        } else {
+            await prisma.account.update({
+                where: { id: account.id },
+                data: {
+                    providerId: "credential",
+                    accountId: String(account.userId),
+                },
+            });
+            console.log(`  Fixed account ${account.id} (userId: ${account.userId})`);
+        }
     }
 
     console.log(`✅ Fixed ${accounts.length} account record(s).`);
