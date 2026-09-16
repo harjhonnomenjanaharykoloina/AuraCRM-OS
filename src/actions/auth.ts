@@ -96,6 +96,17 @@ export async function register(data: z.infer<typeof registerSchema>) {
                 },
             });
 
+            // 2b. Create Account record (username provider)
+            await tx.account.create({
+                 data: {
+                    id: crypto.randomUUID(),
+                    userId: user.id,
+                    accountId: String(user.id),
+                    providerId: "credential",
+                    password: hashedPassword,
+                 },
+            });
+
             // 3. Link org owner
             await tx.organization.update({
                 where: { id: organization.id },

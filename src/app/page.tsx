@@ -1,6 +1,5 @@
 import Image from "next/image";
-import { Open_Sans, Poppins } from "next/font/google";
-import { Button } from "@/components/ui/button";
+import { poppins as headingFont, openSans as bodyFont } from "@/lib/fonts";
 import { PublicSiteFooter } from "@/components/shared/public-site-footer";
 import { PublicSiteHeader } from "@/components/shared/public-site-header";
 import { MermaidDiagram } from "@/components/shared/mermaid-diagram";
@@ -16,7 +15,6 @@ import {
     Database,
     FileUp,
     GitBranch,
-    Github,
     Hash,
     History,
     Layers,
@@ -35,9 +33,6 @@ import {
     Users,
     Workflow,
 } from "lucide-react";
-
-const headingFont = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
-const bodyFont = Open_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 const fieldTypes: Array<{ name: string; icon: LucideIcon }> = [
     { name: "Text", icon: Type },
@@ -541,16 +536,8 @@ export default function Home() {
                             eyebrow="Overview"
                             title="Open-Source CRM for Developers"
                             description="AuraCRM is an open-source, metadata-driven, multi-tenant CRM learning project for developers. It shows how objects, fields, pages, apps, permissions, and workflows can be shaped through configuration instead of being hardcoded into the product."
-                        />
-                       
-                        <div className="mt-6 flex flex-wrap items-center justify-center gap-4">
-                            <a href="https://github.com/ayas-ab/AuraCRM" target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="lg" className="cursor-pointer rounded-full border-amber-400 bg-amber-300 px-6 py-4 text-sm font-semibold text-amber-950 shadow-md shadow-amber-200/80 transition-all duration-300 hover:-translate-y-1 hover:border-amber-500 hover:bg-amber-200 hover:text-amber-950 hover:shadow-lg hover:shadow-amber-200">
-                                    <Github className="mr-2 h-5 w-5" />
-                                    View Source Code / Download
-                                </Button>
-                            </a>
-                        </div>
+                         />
+                        
                     </div>
                 </section>
 
