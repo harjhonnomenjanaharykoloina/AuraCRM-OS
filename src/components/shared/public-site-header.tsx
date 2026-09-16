@@ -101,11 +101,11 @@ export function PublicSiteHeader() {
             <div className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-[0_10px_35px_-18px_rgba(37,99,235,0.35)] backdrop-blur-sm supports-[backdrop-filter]:bg-white/80 sm:px-5 lg:px-6">
                 <Link href="/" className="group flex items-center gap-2.5">
                     <img src="/logo.png" alt="AuraCRM" className="h-9 w-9" />
-                    <div className="flex flex-col">
-                        <span className={`${headingFont.className} bg-gradient-to-r from-sky-700 to-blue-700 bg-clip-text text-xl font-bold leading-none text-transparent`}>
+                    <div className="flex flex-col select-none relative z-10">
+                        <span className={`pointer-events-none ${headingFont.className} bg-gradient-to-r from-sky-700 to-blue-700 bg-clip-text text-xl font-bold leading-none text-transparent`}>
                             AuraCRM
                         </span>
-                        <span className="hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:block">
+                        <span className="pointer-events-none hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:block">
                             Metadata CRM
                         </span>
                     </div>

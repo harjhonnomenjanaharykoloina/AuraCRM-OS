@@ -41,8 +41,8 @@ export function CleanMinimalSignIn({
                     </div>
                 </div>
 
-                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Sign in to AuraCRM</h1>
-                <p className="mb-6 text-center text-sm text-slate-500">
+                <h1 className="select-none mb-2 text-center text-2xl font-semibold text-slate-900">Sign in to AuraCRM</h1>
+                <p className="select-none cursor-default mb-6 text-center text-sm text-slate-500">
                     Use your username and password to access your workspace.
                 </p>
 
@@ -92,7 +92,7 @@ export function CleanMinimalSignIn({
                     {isLoading ? "Signing in..." : "Get Started"}
                 </Button>
 
-                <p className="mt-5 text-center text-sm text-slate-500">
+                <p className="select-none cursor-default mt-5 text-center text-sm text-slate-500">
                     New here?{" "}
                     <a href={ctaHref} className="font-medium text-primary hover:underline">
                         {ctaLabel}
