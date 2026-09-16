@@ -1,0 +1,64 @@
+diff --git a/node_modules/@better-auth/prisma-adapter/dist/index.mjs b/node_modules/@better-auth/prisma-adapter/dist/index.mjs
+index 06dc872..15f1d38 100644
+--- a/node_modules/@better-auth/prisma-adapter/dist/index.mjs
++++ b/node_modules/@better-auth/prisma-adapter/dist/index.mjs
+@@ -119,12 +119,21 @@ const prismaAdapter = (prisma, config) => {
+ 		};
+ 		const convertWhereClause = ({ action, model, where }) => {
+ 			if (!where || !where.length) return {};
+-			const buildSingleCondition = (w) => {
++			function buildSingleCondition(w) {
+ 				const fieldName = getFieldName({
+ 					model,
+ 					field: w.field
+ 				});
+-				const isInsensitive = (w.mode ?? "sensitive") === "insensitive" && (typeof w.value === "string" || Array.isArray(w.value) && w.value.every((v) => typeof v === "string"));
++				let value = w.value;
++				if (typeof value === "string") {
++					const fieldAttrs = getFieldAttributes({ model, field: w.field });
++					// Convert numeric strings to Int for known Int fields in this schema
++					const intFields = new Set(["userId", "organizationId", "groupId", "ownerId", "createdById", "lastModifiedById", "changedById", "oldOwnerId", "newOwnerId", "authorId", "assigneeId"]);
++					if (intFields.has(w.field) && /^-?\d+$/.test(value)) {
++						value = parseInt(value, 10);
++					}
++				}
++				const isInsensitive = (w.mode ?? "sensitive") === "insensitive" && (typeof value === "string" || Array.isArray(value) && value.every((v) => typeof v === "string"));
+ 				const providerSupportsMode = config.provider === "postgresql" || config.provider === "mongodb";
+ 				const prismaMode = isInsensitive && providerSupportsMode ? "insensitive" : void 0;
+ 				const modeFilter = prismaMode ? { mode: prismaMode } : {};
+@@ -143,16 +152,16 @@ const prismaAdapter = (prisma, config) => {
+ 					} };
+ 				}
+ 				if (w.operator === "eq" || !w.operator) return { [fieldName]: {
+-					equals: w.value,
++					equals: value,
+ 					...modeFilter
+ 				} };
+ 				if (w.operator === "ne") return { [fieldName]: {
+-					not: { equals: w.value },
++					not: { equals: value },
+ 					...modeFilter
+ 				} };
+ 				const prismaOp = operatorToPrismaOperator(w.operator);
+ 				return { [fieldName]: {
+-					[prismaOp]: w.value,
++					[prismaOp]: value,
+ 					...modeFilter
+ 				} };
+ 			};
+@@ -168,7 +177,14 @@ const prismaAdapter = (prisma, config) => {
+ 						model,
+ 						field: w.field
+ 					});
+-					result[fieldName] = w.value;
++					let v = w.value;
++					if (typeof v === "string") {
++						const intFields = new Set(["userId", "organizationId", "groupId", "ownerId", "createdById", "lastModifiedById", "changedById", "oldOwnerId", "newOwnerId", "authorId", "assigneeId"]);
++						if (intFields.has(w.field) && /^-?\d+$/.test(v)) {
++							v = parseInt(v, 10);
++						}
++					}
++					result[fieldName] = v;
+ 				}
+ 				if (andComplexClause.length > 0) result.AND = andComplexClause;
+ 				if (orClause.length > 0) result.OR = orClause;

@@ -14,7 +14,7 @@
     "test:unit": "vitest --run",
     "test:coverage": "vitest run --coverage",
     "build:worker": "opennextjs-cloudflare build",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate && patch-package",
     "seed": "tsx scripts/seed-admin.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
     "fix:accounts": "tsx scripts/fix-accounts.ts"
@@ -95,6 +95,8 @@
     "dotenv": "^17.4.2",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.0.7",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
     "prisma": "^7.10.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",

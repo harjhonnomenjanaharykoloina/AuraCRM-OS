@@ -1,0 +1,6 @@
+# yarn lockfile v1
+
+"@better-auth/prisma-adapter@^1.7.5":
+  version "1.7.5"
+  resolved "https://registry.npmjs.org/@better-auth/prisma-adapter/-/prisma-adapter-1.7.5.tgz"
+  integrity sha512-QfW6HS9vK0FMcbI/GsQLdplICxOz0EPzYWGONZT4ovL3cSItd4YH/09USbPPVl+VUQCdznAQIk+n+NKvHdmSag==
