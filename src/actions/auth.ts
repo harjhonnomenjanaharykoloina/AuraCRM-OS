@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createOrgTemplate } from "@/lib/seeding/create-org-template";
 import { ensureUserCompanionRecord } from "@/lib/user-companion";
 
+import { legacySignIn } from "@/lib/auth-proxy-fix";
 const registerSchema = z.object({
     organizationName: z.string().min(2, "Organization name must be at least 2 characters"),
     name: z.string().min(2, "Name must be at least 2 characters"),
@@ -209,4 +210,15 @@ export async function register(data: z.infer<typeof registerSchema>) {
             error: error?.message || "An error occurred during registration. Please try again.",
         };
     }
+}
+
+export async function legacySignInAction(
+    username: string,
+    password: string
+) {
+    const user = await legacySignIn(username, password);
+    if (user) {
+        return { success: true };
+    }
+    return { success: false };
 }
