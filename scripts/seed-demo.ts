@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -52,8 +53,8 @@ async function main() {
             data: {
                 id: crypto.randomUUID(),
                 userId: user.id,
-                accountId: username,
-                providerId: "username",
+                accountId: String(user.id),
+                providerId: "credential",
                 password: hashedPassword,
             },
         });
@@ -137,6 +138,15 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
                     password: hashedPassword,
                     userType: "standard",
                     groupId,
+                },
+            });
+            await tx.account.create({
+                data: {
+                    id: crypto.randomUUID(),
+                    userId: user.id,
+                    accountId: String(user.id),
+                    providerId: "credential",
+                    password: hashedPassword,
                 },
             });
             createdUsers.push(user);
@@ -278,7 +288,7 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
                 { objectDefId: userObj.id, apiName: "user_id", label: "UserId", type: "Text", required: true, isExternalId: true, isUnique: true },
             ],
         });
-        await createDefaultListView(userObj.id, userObj.pluralLabel);
+        await createDefaultListView(userObj.id, userObj.pluralLabel, ["name", "user_id"]);
 
         // Company object
         const companyObj = await tx.objectDefinition.create({
@@ -295,7 +305,7 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
         if (companyIndustryField) {
             await tx.picklistOption.createMany({ data: ["Tech", "Finance", "Retail", "Other"].map((label, index) => ({ organizationId, fieldDefId: companyIndustryField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
         }
-        await createDefaultListView(companyObj.id, companyObj.pluralLabel);
+        await createDefaultListView(companyObj.id, companyObj.pluralLabel, ["name", "website", "industry"]);
 
         // Contact object
         const contactObj = await tx.objectDefinition.create({
@@ -312,7 +322,7 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
                 { objectDefId: contactObj.id, apiName: "company", label: "Company", type: "Lookup", lookupTargetId: companyObj.id },
             ],
         });
-        await createDefaultListView(contactObj.id, contactObj.pluralLabel);
+        await createDefaultListView(contactObj.id, contactObj.pluralLabel, ["name", "email", "phone"]);
 
         // Opportunity object
         const opportunityObj = await tx.objectDefinition.create({
@@ -331,7 +341,7 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
         if (opportunityStageField) {
             await tx.picklistOption.createMany({ data: ["Prospecting", "Negotiation", "Closed Won", "Closed Lost"].map((label, index) => ({ organizationId, fieldDefId: opportunityStageField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
         }
-        await createDefaultListView(opportunityObj.id, opportunityObj.pluralLabel);
+        await createDefaultListView(opportunityObj.id, opportunityObj.pluralLabel, ["name", "stage", "amount"]);
 
         // Case object
         const caseObj = await tx.objectDefinition.create({
@@ -355,7 +365,7 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
         if (casePriorityField) {
             await tx.picklistOption.createMany({ data: ["Low", "Medium", "High"].map((label, index) => ({ organizationId, fieldDefId: casePriorityField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
         }
-        await createDefaultListView(caseObj.id, caseObj.pluralLabel);
+        await createDefaultListView(caseObj.id, caseObj.pluralLabel, ["name", "subject", "status", "priority"]);
 
         // Queue + Group default (from createOrgTemplate)
         await tx.queue.create({ data: { organizationId, name: "Unassigned", description: "Default queue for new records." } });

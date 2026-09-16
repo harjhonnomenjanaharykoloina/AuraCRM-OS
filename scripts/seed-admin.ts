@@ -42,13 +42,13 @@ async function main() {
         },
     });
 
-    // Create Account record (required by better-auth username plugin)
+    // Create Account record (required by better-auth for credential-based login)
     await prisma.account.create({
         data: {
             id: crypto.randomUUID(),
             userId: user.id,
-            accountId: username,
-            providerId: "username",
+            accountId: String(user.id),
+            providerId: "credential",
             password: hashedPassword,
         },
     });
