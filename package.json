@@ -13,7 +13,8 @@
     "test": "vitest",
     "test:unit": "vitest --run",
     "test:coverage": "vitest run --coverage",
-    "build:worker": "opennextjs-cloudflare build"
+    "build:worker": "opennextjs-cloudflare build",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.5",

@@ -1219,6 +1219,7 @@ model Session {
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
+  organizationId String?
 }
 
 model Account {
@@ -1233,6 +1234,7 @@ model Account {
   idToken           String?
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
+  scope                   String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Poppins } from "next/font/google";
+import { poppins as headingFont } from "@/lib/fonts";
 import { ArrowRight, LogIn, Menu, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -14,8 +14,6 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const headingFont = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 export function PublicSiteHeader() {
     const pathname = usePathname();

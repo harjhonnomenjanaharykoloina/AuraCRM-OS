@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, Lock, Mail, User, UserRoundPlus } from "lucide-react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -49,9 +50,11 @@ export function CleanMinimalRegister({
 
                 {/* White-label logo */}
                 <div className="mb-4 flex justify-center">
-                    <img
+                    <Image
                         src={process.env.NEXT_PUBLIC_APP_LOGO || "/logo.png"}
                         alt="App Logo"
+                        width={128}
+                        height={48}
                         className="mx-auto max-h-12 w-auto object-contain"
                     />
                 </div>

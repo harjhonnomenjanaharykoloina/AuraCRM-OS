@@ -1,6 +1,4 @@
-import { Poppins } from "next/font/google";
-
-const headingFont = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
+import { poppins as headingFont } from "@/lib/fonts";
 
 export function PublicSiteFooter() {
     return (
