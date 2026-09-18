@@ -36,5 +36,7 @@ export default async function middleware(req: Request) {
 }
 
 export const config = {
-    matcher: ["/((?!_next/static|_next/image|favicon.ico|imgs/).*)"],
+    matcher: [
+        "/((?!_next/static|_next/image|favicon.ico|imgs/|.*\\.(?:png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf|eot)).*)",
+    ],
 };
