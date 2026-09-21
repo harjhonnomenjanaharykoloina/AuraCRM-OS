@@ -11,9 +11,9 @@ export default function AuthLayout({
         <div className="min-h-screen overflow-x-hidden bg-[linear-gradient(145deg,#cfe3ff_0%,#eef4ff_42%,#f8fbff_100%)]">
             <PublicSiteHeader />
             <main className="relative px-4 py-10 sm:px-6 lg:px-8">
-                <div className="absolute left-[-90px] top-[80px] h-72 w-72 rounded-full bg-sky-300/22 blur-3xl" />
-                <div className="absolute bottom-[-80px] right-[-80px] h-80 w-80 rounded-full bg-blue-400/16 blur-3xl" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.72),transparent_55%)]" />
+                <div className="absolute left-[-90px] top-[80px] h-72 w-72 rounded-full bg-sky-300/22 blur-3xl pointer-events-none" />
+                <div className="absolute bottom-[-80px] right-[-80px] h-80 w-80 rounded-full bg-blue-400/16 blur-3xl pointer-events-none" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.72),transparent_55%)] pointer-events-none" />
                 <div className="pointer-events-none absolute inset-0">
                     <svg className="absolute inset-0 h-full w-full opacity-55" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <line x1="14" y1="28" x2="31" y2="44" className="stroke-sky-300/70" strokeWidth="0.18" />
@@ -38,7 +38,7 @@ export default function AuthLayout({
                     <StatPill className="right-[18%] top-[46%]" text="Mentions: 5" />
                     <StatPill className="right-[15%] top-[61%]" text="Import Jobs: 2" />
                 </div>
-                <div className="relative mx-auto flex min-h-[calc(100vh-16rem)] w-full max-w-7xl items-center justify-center">
+                <div className="relative z-10 pointer-events-auto mx-auto flex min-h-[calc(100vh-16rem)] w-full max-w-7xl items-center justify-center">
                     <div className="w-full max-w-md">{children}</div>
                 </div>
             </main>
