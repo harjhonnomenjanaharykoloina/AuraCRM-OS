@@ -335,6 +335,7 @@ export async function getMetricData(objectDefId: number, config: any = {}) {
     let where: any = {
         objectDefId: objectDef.id,
         organizationId,
+        isDeleted: false,
     };
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);
@@ -428,6 +429,7 @@ export async function getListWidgetData(objectDefId: number, config: any = {}) {
     let where: any = {
         objectDefId: objectDef.id,
         organizationId,
+        isDeleted: false,
     };
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);
@@ -528,6 +530,7 @@ export async function getListWidgetData(objectDefId: number, config: any = {}) {
         ? await db.record.findMany({
             where: {
                 organizationId,
+                isDeleted: false,
                 id: { in: Array.from(lookupIds) },
             },
             select: {
@@ -664,6 +667,7 @@ export async function getChartData(objectDefId: number, config: any = {}) {
     let where: any = {
         objectDefId: objectDef.id,
         organizationId,
+        isDeleted: false,
     };
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);

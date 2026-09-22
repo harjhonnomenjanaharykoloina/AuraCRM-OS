@@ -25,6 +25,7 @@ import type { LayoutConfigV2 } from "@/lib/record-page-layout";
 import { USER_ID_FIELD_API_NAME } from "@/lib/user-companion";
 import { formatDateOnlyForDisplay, formatDateTimeForDisplay } from "@/lib/temporal";
 import { Pencil } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 
 const accountSchemaShape = {
     accountName: z.string().trim().min(1, "Name is required"),
@@ -75,6 +76,7 @@ export function ManagedUserProfileForm({
     layoutConfig = null,
     lookupResolutions = {},
 }: ManagedUserProfileFormProps) {
+    const t = useTranslations("admin.objects.managedUserProfileForm");
     const [isEditing, setIsEditing] = useState(false);
 
     const systemFieldApiNames = useMemo(
@@ -314,7 +316,7 @@ export function ManagedUserProfileForm({
                 accountUserType: user.userType,
                 accountGroupId: user.groupId ? String(user.groupId) : "none",
             }}
-            submitLabel="Save Profile"
+            submitLabel={t("save")}
             submitOverride={async (values) => {
                 const {
                     accountName,

@@ -16,8 +16,10 @@ import {
 import { Loader2, Database } from "lucide-react";
 import { toast } from "sonner";
 import { seedDemoData } from "@/actions/admin/seed-demo-data";
+import { useTranslations } from "@/i18n/client";
 
 export function DemoDataButton() {
+    const t = useTranslations();
     const [loading, setLoading] = useState(false);
     const [open, setOpen] = useState(false);
 
@@ -26,13 +28,13 @@ export function DemoDataButton() {
         try {
             const result = await seedDemoData();
             if (result.success) {
-                toast.success("Demo data populated successfully. All created users use password 123123.");
+                toast.success(t("admin.demoData.success"));
                 setOpen(false);
             } else {
-                toast.error(result.error || "Failed to populate data");
+                toast.error(result.error || t("admin.demoData.error"));
             }
         } catch {
-            toast.error("An unexpected error occurred");
+            toast.error(t("admin.demoData.unexpectedError"));
         } finally {
             setLoading(false);
         }
@@ -43,34 +45,38 @@ export function DemoDataButton() {
             <AlertDialogTrigger asChild>
                 <Button variant="outline" className="gap-2">
                     <Database className="h-4 w-4" />
-                    Populate Demo Data
+                    {t("admin.demoData.button")}
                 </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
                 <AlertDialogHeader>
-                    <AlertDialogTitle>Create Demo Data?</AlertDialogTitle>
+                    <AlertDialogTitle>{t("admin.demoData.title")}</AlertDialogTitle>
                     <AlertDialogDescription asChild>
                         <div className="text-muted-foreground text-sm">
-                            This will add a simple sample workspace to your organization, including:
+                            {t("admin.demoData.description")}
                             <ul className="list-disc pl-4 mt-2 space-y-1">
-                                <li>2 sample apps: Jira and Healthcare</li>
-                                <li>6 objects with fields, pages, and list views</li>
-                                <li>Standard users, groups, queues, permissions, and sharing rules</li>
-                                <li>Sample records and working dashboard widgets</li>
+                                <li>{t("admin.demoData.bulletApps")}</li>
+                                <li>{t("admin.demoData.bulletObjects")}</li>
+                                <li>{t("admin.demoData.bulletUsers")}</li>
+                                <li>{t("admin.demoData.bulletWidgets")}</li>
                             </ul>
                             <br />
-                            This is intended for a fresh org. <strong>This action cannot be easily undone.</strong>
+                            {t("admin.demoData.warning")}{" "}
+                            <strong>{t("admin.demoData.cannotUndo")}</strong>
                         </div>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                    <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={(e) => {
-                        e.preventDefault();
-                        handleSeed();
-                    }} disabled={loading}>
+                    <AlertDialogCancel disabled={loading}>{t("admin.demoData.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction
+                        onClick={(e) => {
+                            e.preventDefault();
+                            handleSeed();
+                        }}
+                        disabled={loading}
+                    >
                         {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {loading ? "Creating..." : "Yes, Create Data"}
+                        {loading ? t("admin.demoData.creating") : t("admin.demoData.confirm")}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

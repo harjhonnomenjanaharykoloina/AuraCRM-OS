@@ -27,7 +27,7 @@ export function AppPermissionToggle({ permissionSetId, appId, initialValue }: Ap
                 toast.success(checked ? "Access granted" : "Access revoked");
                 router.refresh();
             }
-        } catch (error) {
+        } catch {
             setChecked(!checked);
             toast.error("Failed to update permission");
         }

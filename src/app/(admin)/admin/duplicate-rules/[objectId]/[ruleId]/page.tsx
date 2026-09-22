@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -14,6 +15,7 @@ export default async function DuplicateRuleDetailPage({
 }) {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
     const { objectId, ruleId } = await params;
     const objectDefId = parseInt(objectId, 10);
@@ -68,8 +70,8 @@ export default async function DuplicateRuleDetailPage({
                     </Link>
                 </Button>
                 <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Duplicate Rules</p>
-                    <h1 className="text-2xl font-bold tracking-tight">Edit rule for {rule.objectDef.label}</h1>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("admin.duplicateRuleDetail.subtitle")}</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{t("admin.duplicateRuleDetail.editRule", { objectLabel: rule.objectDef.label })}</h1>
                 </div>
             </div>
 

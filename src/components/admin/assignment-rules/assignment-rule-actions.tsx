@@ -17,6 +17,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 
 export function AssignmentRuleActions({
     ruleId,
@@ -27,12 +28,13 @@ export function AssignmentRuleActions({
 }) {
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
+    const t = useTranslations();
 
     const handleToggle = () => {
         startTransition(async () => {
             const result = await toggleAssignmentRule(ruleId, !isActive);
             if (result.success) {
-                toast.success(isActive ? "Rule deactivated" : "Rule activated");
+                toast.success(isActive ? t("admin.ruleCommon.ruleDeactivated") : t("admin.ruleCommon.ruleActivated"));
                 router.refresh();
             } else {
                 toast.error(result.error);
@@ -44,7 +46,7 @@ export function AssignmentRuleActions({
         startTransition(async () => {
             const result = await deleteAssignmentRule(ruleId);
             if (result.success) {
-                toast.success("Rule deleted");
+                toast.success(t("admin.ruleCommon.ruleDeleted"));
                 router.refresh();
             } else {
                 toast.error(result.error);
@@ -55,12 +57,12 @@ export function AssignmentRuleActions({
     return (
         <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleToggle} disabled={isPending}>
-                {isActive ? "Deactivate" : "Activate"}
+                {isActive ? t("admin.ruleCommon.deactivate") : t("admin.ruleCommon.activate")}
             </Button>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="sm" disabled={isPending}>
-                        Delete
+                        {t("shared.buttons.delete")}
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent className="sm:max-w-[440px]">
@@ -70,20 +72,20 @@ export function AssignmentRuleActions({
                                 <Trash2 className="h-5 w-5" />
                             </div>
                             <div className="space-y-1">
-                                <AlertDialogTitle>Delete this assignment rule?</AlertDialogTitle>
+                                <AlertDialogTitle>{t("admin.assignmentRuleDelete.title")}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This removes the rule and stops any new records from being routed by it.
+                                    {t("admin.assignmentRuleDelete.description")}
                                 </AlertDialogDescription>
                             </div>
                         </div>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel>{t("admin.ruleCommon.cancel")}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDelete}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                            Delete
+                            {t("shared.buttons.delete")}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

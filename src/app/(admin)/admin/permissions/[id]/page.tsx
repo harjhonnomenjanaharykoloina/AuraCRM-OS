@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 
@@ -19,33 +20,28 @@ import { SystemPermissionToggle } from "@/components/admin/permissions/system-pe
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { type TFunction } from "@/i18n/t";
 
-const objectPermissionHelp: Record<string, string> = {
-    Read: "Lets users open records they already have row-level access to.",
-    Create: "Lets users create new records for this object.",
-    Edit: "Lets users edit records they are allowed to update through ownership, sharing, or broader access.",
-    Delete: "Lets users delete records they are allowed to remove through ownership, sharing, or broader access.",
-    "View All": "Lets users read every record for this object, ignoring ownership and sharing.",
-    "Modify All": "Lets users read, edit, and delete every record for this object, ignoring ownership and sharing.",
-    "Modify List Views": "Lets users create, change, and remove list views for this object.",
-};
+type PermissionHeaderName = "read" | "create" | "edit" | "delete" | "viewAll" | "modifyAll" | "modifyListViews";
 
-function PermissionHeader({ label }: { label: keyof typeof objectPermissionHelp }) {
+function PermissionHeader({ t, name }: { t: TFunction; name: PermissionHeaderName }) {
+    const labelKey = `admin.permissionSetDetail.objectPermissionHelp.${name}Label`;
+    const helpKey = `admin.permissionSetDetail.objectPermissionHelp.${name}Help`;
     return (
         <div className="flex items-center justify-center gap-1.5">
-            <span>{label}</span>
+            <span>{t(labelKey)}</span>
             <Tooltip>
                 <TooltipTrigger asChild>
                     <button
                         type="button"
                         className="inline-flex h-4 w-4 items-center justify-center text-muted-foreground hover:text-foreground"
-                        aria-label={`What does ${label} mean?`}
+                        aria-label={t("admin.permissionSetDetail.permissionHelpAria", { permission: t(labelKey) })}
                     >
                         <CircleHelp className="h-3.5 w-3.5" />
                     </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-56 text-sm leading-relaxed">
-                    {objectPermissionHelp[label]}
+                    {t(helpKey)}
                 </TooltipContent>
             </Tooltip>
         </div>
@@ -55,6 +51,7 @@ function PermissionHeader({ label }: { label: keyof typeof objectPermissionHelp 
 export default async function PermissionSetDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const user = session.user as any;
     const organizationId = parseInt(user.organizationId);
     const { id } = await params;
@@ -110,19 +107,19 @@ export default async function PermissionSetDetailPage({ params }: { params: Prom
                         value="objects"
                         className="rounded-none border-b-2 border-transparent px-4 py-2 font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
                     >
-                        Object Permissions
+                        {t("admin.permissionSetDetail.objectPermissions")}
                     </TabsTrigger>
                     <TabsTrigger
                         value="apps"
                         className="rounded-none border-b-2 border-transparent px-4 py-2 font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
                     >
-                        App Permissions
+                        {t("admin.permissionSetDetail.appPermissions")}
                     </TabsTrigger>
                     <TabsTrigger
                         value="system"
                         className="rounded-none border-b-2 border-transparent px-4 py-2 font-medium text-muted-foreground data-[state=active]:border-primary data-[state=active]:text-primary data-[state=active]:shadow-none"
                     >
-                        System Permissions
+                        {t("admin.permissionSetDetail.systemPermissions")}
                     </TabsTrigger>
                 </TabsList>
 
@@ -131,14 +128,14 @@ export default async function PermissionSetDetailPage({ params }: { params: Prom
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Object</TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="Read" /></TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="Create" /></TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="Edit" /></TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="Delete" /></TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="View All" /></TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="Modify All" /></TableHead>
-                                    <TableHead className="text-center"><PermissionHeader label="Modify List Views" /></TableHead>
+                                    <TableHead>{t("admin.permissionSetDetail.object")}</TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="read" /></TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="create" /></TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="edit" /></TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="delete" /></TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="viewAll" /></TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="modifyAll" /></TableHead>
+                                    <TableHead className="text-center"><PermissionHeader t={t} name="modifyListViews" /></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -226,9 +223,9 @@ export default async function PermissionSetDetailPage({ params }: { params: Prom
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>App Name</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="w-[100px] text-center">Access</TableHead>
+                                    <TableHead>{t("admin.permissionSetDetail.appName")}</TableHead>
+                                    <TableHead>{t("shared.common.description")}</TableHead>
+                                    <TableHead className="w-[100px] text-center">{t("admin.permissionSetDetail.access")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -256,7 +253,7 @@ export default async function PermissionSetDetailPage({ params }: { params: Prom
                                 {apps.length === 0 && (
                                     <TableRow>
                                         <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                            No apps found. Create one in App Manager.
+                                            {t("admin.permissionSetDetail.noAppsFound")}
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -270,16 +267,16 @@ export default async function PermissionSetDetailPage({ params }: { params: Prom
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Permission</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="w-[120px] text-center">Enabled</TableHead>
+                                    <TableHead>{t("admin.permissionSetDetail.permission")}</TableHead>
+                                    <TableHead>{t("shared.common.description")}</TableHead>
+                                    <TableHead className="w-[120px] text-center">{t("admin.permissionSetDetail.enabled")}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 <TableRow>
-                                    <TableCell className="font-medium">Data Loading</TableCell>
+                                    <TableCell className="font-medium">{t("admin.permissionSetDetail.dataLoading")}</TableCell>
                                     <TableCell>
-                                        Allows bulk insert/update imports for records (CSV).
+                                        {t("admin.permissionSetDetail.dataLoadingHelp")}
                                     </TableCell>
                                     <TableCell className="text-center">
                                         <SystemPermissionToggle

@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import {
@@ -15,6 +16,7 @@ import { RemoveQueueMemberButton } from "@/components/admin/queues/remove-queue-
 export default async function QueueDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const { id } = await params;
     const queueId = parseInt(id, 10);
     if (isNaN(queueId)) return notFound();
@@ -46,7 +48,7 @@ export default async function QueueDetailPage({ params }: { params: Promise<{ id
 
     const userOptions = availableUsers.map(u => ({
         id: String(u.id),
-        label: `${u.name || u.email || `User #${u.id}`} (@${u.username})`,
+        label: `${u.name || u.email || t("shared.common.userFallback", { id: u.id })} (@${u.username})`,
     }));
 
     return (
@@ -63,9 +65,9 @@ export default async function QueueDetailPage({ params }: { params: Promise<{ id
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead>{t("shared.common.user")}</TableHead>
+                            <TableHead>{t("shared.common.email")}</TableHead>
+                            <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -73,7 +75,7 @@ export default async function QueueDetailPage({ params }: { params: Promise<{ id
                             <TableRow key={member.id}>
                                 <TableCell className="font-medium">
                                     <div className="flex flex-col">
-                                        <span>{member.user.name || `User #${member.user.id}`}</span>
+                                        <span>{member.user.name || t("shared.common.userFallback", { id: member.user.id })}</span>
                                         <span className="text-xs text-muted-foreground">@{member.user.username}</span>
                                     </div>
                                 </TableCell>
@@ -82,7 +84,7 @@ export default async function QueueDetailPage({ params }: { params: Promise<{ id
                                     <RemoveQueueMemberButton
                                         queueId={queue.id}
                                         userId={member.userId}
-                                        memberName={member.user.name || `User #${member.user.id}`}
+                                        memberName={member.user.name || t("shared.common.userFallback", { id: member.user.id })}
                                         queueName={queue.name}
                                     />
                                 </TableCell>
@@ -91,7 +93,7 @@ export default async function QueueDetailPage({ params }: { params: Promise<{ id
                         {queue.members.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                    No members yet. Add users to this queue.
+                                    {t("admin.queueDetail.noMembersYet")}
                                 </TableCell>
                             </TableRow>
                         )}

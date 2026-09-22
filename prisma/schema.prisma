@@ -88,6 +88,16 @@ enum MetadataDependencyReferenceKind {
   NAV_OBJECT
 }
 
+enum OpportunityStage {
+  LEAD
+  QUALIFIED
+  DEMO
+  PROPOSAL
+  NEGOTIATION
+  WON
+  LOST
+}
+
 // ============================================================================
 // 1. ORGANIZATION (Multi-Tenancy)
 // ============================================================================
@@ -646,6 +656,8 @@ model Record {
   lastModifiedById Int
   lastModifiedBy   User     @relation("RecordLastModifiedBy", fields: [lastModifiedById], references: [id])
 
+  isDeleted Boolean @default(false)
+
   shares      RecordShare[]
   notifications Notification[]
   fieldHistory FieldHistory[]
@@ -663,6 +675,7 @@ model Record {
   @@index([organizationId, objectDefId, name])
   @@index([organizationId, name])
   @@index([backingUserId])
+  @@index([organizationId, objectDefId, isDeleted])
 }
 
 model Notification {

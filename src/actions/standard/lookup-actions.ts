@@ -54,6 +54,7 @@ export async function getLookupOptions(targetObjectDefId: number) {
         where: {
             organizationId,
             objectDefId: targetObjectDefId,
+            isDeleted: false,
             ...(accessFilter ?? {}),
         },
         include: {
@@ -79,7 +80,7 @@ export async function getLookupOptions(targetObjectDefId: number) {
 }
 
 export async function getLookupLabel(targetObjectDefId: number, recordId: number) {
-    const { userId, organizationId } = await getUserContext();
+    const { userId: _userId, organizationId } = await getUserContext();
 
     // 1. Get Target Object Definition
     const targetObjectDef = await db.objectDefinition.findUnique({
@@ -99,6 +100,7 @@ export async function getLookupLabel(targetObjectDefId: number, recordId: number
         where: {
             id: recordId,
             organizationId,
+            isDeleted: false,
         },
         include: {
             fields: {

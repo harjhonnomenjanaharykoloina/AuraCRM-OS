@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { CreateFieldDialog } from "@/components/admin/objects/create-field-dialog";
 import {
@@ -34,6 +35,7 @@ import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 export default async function ObjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const user = session.user as any;
     const organizationId = parseInt(user.organizationId);
     const { id } = await params;
@@ -141,7 +143,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                     <div className="flex items-center gap-2">
                         <h1 className="text-2xl font-bold tracking-tight text-slate-900">{objectDef.label}</h1>
                         <Badge variant="outline" className="text-xs font-normal bg-white">
-                            {objectDef.isSystem ? "Standard Object" : "Custom Object"}
+                            {objectDef.isSystem ? t("admin.objectDetail.standardObject") : t("admin.objectDetail.customObject")}
                         </Badge>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -183,7 +185,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                     <TableProperties className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-semibold">Fields & Relationships</div>
+                                    <div className="text-sm font-semibold">{t("admin.objectDetail.fieldsAndRelationships")}</div>
                                 </div>
                             </div>
                         </div>
@@ -198,7 +200,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                     <Wrench className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-semibold">Validation Rules</div>
+                                    <div className="text-sm font-semibold">{t("admin.objectDetail.validationRules")}</div>
                                 </div>
                             </div>
                         </div>
@@ -213,7 +215,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                     <LayoutTemplate className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-semibold">Record Pages</div>
+                                    <div className="text-sm font-semibold">{t("admin.objectDetail.recordPages")}</div>
                                 </div>
                             </div>
                         </div>
@@ -228,7 +230,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                     <AlertTriangle className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0">
-                                    <div className="text-sm font-semibold">Delete Impact</div>
+                                    <div className="text-sm font-semibold">{t("admin.objectDetail.deleteImpact")}</div>
                                 </div>
                             </div>
                         </div>
@@ -239,9 +241,9 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle>Fields & Relationships</CardTitle>
+                                <CardTitle>{t("admin.objectDetail.fieldsAndRelationships")}</CardTitle>
                                 <p className="text-sm text-muted-foreground">
-                                    Configure the schema for this object. Changes are reflected instantly in forms and record lists.
+                                    {t("admin.objectDetail.configureObject")}
                                 </p>
                             </div>
                             <CreateFieldDialog objectDefId={objectDef.id} availableObjects={allObjects} />
@@ -251,11 +253,11 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Label</TableHead>
-                                            <TableHead>API Name</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Required</TableHead>
-                                            <TableHead className="w-[170px]">Actions</TableHead>
+                                            <TableHead>{t("shared.common.label")}</TableHead>
+                                            <TableHead>{t("shared.common.apiName")}</TableHead>
+                                            <TableHead>{t("shared.common.type")}</TableHead>
+                                            <TableHead>{t("shared.common.required")}</TableHead>
+                                            <TableHead className="w-[170px]">{t("shared.common.actions")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -267,17 +269,17 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                                     <Badge variant="outline">{field.type}</Badge>
                                                     {field.type === "Lookup" && field.lookupTargetId && (
                                                         <span className="text-xs text-muted-foreground">
-                                                            Ref: {allObjects.find(o => o.id === field.lookupTargetId)?.label}
+                                                            {t("admin.objectDetail.lookupRef")} {allObjects.find(o => o.id === field.lookupTargetId)?.label}
                                                         </span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {field.required ? (
                                                         <Badge variant="default" className="bg-red-100 text-red-800 hover:bg-red-100 border-red-200">
-                                                            Required
+                                                            {t("shared.common.required")}
                                                         </Badge>
                                                     ) : (
-                                                        <span className="text-muted-foreground text-sm">Optional</span>
+                                                        <span className="text-muted-foreground text-sm">{t("shared.common.optional")}</span>
                                                     )}
                                                 </TableCell>
                                                 <TableCell>
@@ -300,7 +302,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                         {objectDef.fields.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                    No fields defined.
+                                                    {t("admin.objectDetail.noFields")}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -323,9 +325,9 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle>Record Page Layouts</CardTitle>
+                                <CardTitle>{t("admin.objectDetail.recordPageLayouts")}</CardTitle>
                                 <p className="text-sm text-muted-foreground">
-                                    Manage layout templates for this object.
+                                    {t("admin.objectDetail.manageLayouts")}
                                 </p>
                             </div>
                             <CreateRecordPageLayoutDialog objectDefId={objectDef.id} />
@@ -335,9 +337,9 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <div className="flex items-start gap-3">
                                     <Info className="mt-0.5 h-4 w-4 text-slate-500" />
                                     <div>
-                                        <p className="font-medium text-slate-900">Default layout</p>
+                                        <p className="font-medium text-slate-900">{t("admin.objectDetail.defaultLayout")}</p>
                                         <p className="mt-1 text-slate-600">
-                                            If no assignment matches, users see the default layout for this object.
+                                            {t("admin.objectDetail.ifNoMatchDefault")}
                                         </p>
                                     </div>
                                 </div>
@@ -346,10 +348,10 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Layout</TableHead>
-                                            <TableHead>Default</TableHead>
-                                            <TableHead>Updated</TableHead>
-                                            <TableHead className="w-[260px]">Actions</TableHead>
+                                            <TableHead>{t("admin.objectDetail.layout")}</TableHead>
+                                            <TableHead>{t("admin.objectDetail.default")}</TableHead>
+                                            <TableHead>{t("admin.objectDetail.updated")}</TableHead>
+                                            <TableHead className="w-[260px]">{t("shared.common.actions")}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -358,7 +360,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                                 <TableCell className="font-medium">{layout.name}</TableCell>
                                                 <TableCell>
                                                     {layout.isDefault ? (
-                                                        <Badge variant="outline">Default</Badge>
+                                                        <Badge variant="outline">{t("admin.objectDetail.default")}</Badge>
                                                     ) : (
                                                         <span className="text-muted-foreground text-sm">-</span>
                                                     )}
@@ -370,7 +372,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                                     <div className="flex items-center gap-2">
                                                         <Button variant="outline" size="sm" asChild>
                                                             <Link href={`/admin/objects/${objectDef.id}/record-pages/${layout.id}`}>
-                                                                Open Builder
+                                                                {t("admin.objectDetail.openBuilder")}
                                                             </Link>
                                                         </Button>
                                                         <SetDefaultRecordPageLayoutButton
@@ -389,7 +391,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                         {recordPageLayouts.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                                    No record page layouts yet.
+                                                    {t("admin.objectDetail.noRecordPageLayouts")}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -402,9 +404,9 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
                             <div>
-                                <CardTitle>Record Page Assignments</CardTitle>
+                                <CardTitle>{t("admin.objectDetail.recordPageAssignments")}</CardTitle>
                                 <p className="text-sm text-muted-foreground">
-                                    Choose which layout applies to each app or permission set.
+                                    {t("admin.objectDetail.chooseLayoutApplies")}
                                 </p>
                             </div>
                             <CreateRecordPageAssignmentDialog
@@ -419,22 +421,21 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <div className="flex items-start gap-3">
                                     <Info className="mt-0.5 h-4 w-4 text-slate-500" />
                                     <div>
-                                        <p className="font-medium text-slate-900">How assignments are matched</p>
+                                        <p className="font-medium text-slate-900">{t("admin.objectDetail.howAssignmentsMatched")}</p>
                                         <p className="mt-1 text-slate-600">
-                                            Lower numbers win. If nothing matches, the default layout is used.
+                                            {t("admin.objectDetail.lowerNumbersWin")}
                                         </p>
                                         <p className="mt-2 text-xs text-slate-600">
-                                            If a user has multiple permission sets that match at the same priority, the system
-                                            picks the first assignment by ID. That can feel random, so avoid overlapping rules.
+                                            {t("admin.objectDetail.assignmentPriorityNote")}
                                         </p>
                                         <ol className="mt-3 space-y-1 text-slate-700">
                                             <li className="flex items-center gap-2">
                                                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">1</span>
-                                                App + Permission
+                                                {t("admin.objectDetail.appAndPermission")}
                                             </li>
                                             <li className="flex items-center gap-2">
                                                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">2</span>
-                                                App only
+                                                {t("admin.objectDetail.appOnly")}
                                             </li>
                                         </ol>
                                     </div>
@@ -444,11 +445,11 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <Table>
                                     <TableHeader>
                                             <TableRow>
-                                                <TableHead>App</TableHead>
-                                                <TableHead>Permission Set</TableHead>
-                                                <TableHead className="w-[100px]">Priority</TableHead>
-                                                <TableHead>Layout</TableHead>
-                                                <TableHead className="w-[120px]">Actions</TableHead>
+                                                <TableHead>{t("admin.objectDetail.app")}</TableHead>
+                                                <TableHead>{t("admin.objectDetail.permissionSet")}</TableHead>
+                                                <TableHead className="w-[100px]">{t("admin.objectDetail.priority")}</TableHead>
+                                                <TableHead>{t("admin.objectDetail.layout")}</TableHead>
+                                                <TableHead className="w-[120px]">{t("shared.common.actions")}</TableHead>
                                             </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -470,7 +471,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                             <TableRow key={assignment.id}>
                                                 <TableCell className="font-medium">{assignment.app.name}</TableCell>
                                                 <TableCell>
-                                                    {assignment.permissionSet?.name || "Any"}
+                                                    {assignment.permissionSet?.name || t("admin.objectDetail.any")}
                                                 </TableCell>
                                                 <TableCell>
                                                     <Badge className="bg-slate-900 text-white">#{priority}</Badge>
@@ -487,7 +488,7 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                         {recordPageAssignments.length === 0 && (
                                             <TableRow>
                                                 <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                                                    No record page assignments yet.
+                                                    {t("admin.objectDetail.noRecordPageAssignments")}
                                                 </TableCell>
                                             </TableRow>
                                         )}
@@ -501,9 +502,9 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                 <TabsContent value="usedin" className="space-y-6">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Delete Impact</CardTitle>
+                            <CardTitle>{t("admin.objectDetail.deleteImpact")}</CardTitle>
                             <p className="text-sm text-muted-foreground">
-                                This view separates references that actually block deleting this object from metadata that only belongs to this object itself.
+                                {t("admin.objectDetail.deleteImpactDescription")}
                             </p>
                         </CardHeader>
                         <CardContent className="space-y-5">
@@ -514,12 +515,12 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                             <AlertTriangle className="h-4 w-4" />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-semibold text-red-950">Blocking references</p>
+                                            <p className="text-sm font-semibold text-red-950">{t("admin.objectDetail.blockingReferencesHeader")}</p>
                                             <p className="text-2xl font-bold tracking-tight text-red-900">
                                                 {objectDeleteDependencies.length}
                                             </p>
                                             <p className="text-xs leading-5 text-red-800">
-                                                External references that must be removed before delete.
+                                                {t("admin.objectDetail.blockingReferencesDesc")}
                                             </p>
                                         </div>
                                     </div>
@@ -530,12 +531,12 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                             <Layers3 className="h-4 w-4" />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-semibold text-amber-950">Object-owned metadata</p>
+                                            <p className="text-sm font-semibold text-amber-950">{t("admin.objectDetail.objectOwnedHeader")}</p>
                                             <p className="text-2xl font-bold tracking-tight text-amber-900">
                                                 {informationalDependencies.length}
                                             </p>
                                             <p className="text-xs leading-5 text-amber-800">
-                                                Removed together with the object. These do not block delete.
+                                                {t("admin.objectDetail.objectOwnedDesc")}
                                             </p>
                                         </div>
                                     </div>
@@ -546,12 +547,12 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                             <ShieldCheck className="h-4 w-4" />
                                         </div>
                                         <div className="space-y-1">
-                                            <p className="text-sm font-semibold text-slate-900">Records</p>
+                                            <p className="text-sm font-semibold text-slate-900">{t("admin.objectDetail.records")}</p>
                                             <p className="text-2xl font-bold tracking-tight text-slate-900">
                                                 {recordCount}
                                             </p>
                                             <p className="text-xs leading-5 text-slate-600">
-                                                Existing records always block object delete until removed.
+                                                {t("admin.objectDetail.existingRecordsBlock")}
                                             </p>
                                         </div>
                                     </div>
@@ -562,11 +563,11 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <div className="flex items-start gap-3">
                                     <Info className="mt-0.5 h-4 w-4 text-slate-500" />
                                     <div className="space-y-1">
-                                        <p className="font-medium text-slate-900">How to read this tab</p>
+                                        <p className="font-medium text-slate-900">{t("admin.objectDetail.howToReadTab")}</p>
                                         <p className="leading-6">
-                                            <span className="font-medium text-red-900">Blocks object delete</span> lists external references that must be removed first.
+                                            <span className="font-medium text-red-900">{t("admin.objectDetail.blocksObjectDelete")}</span> {t("admin.objectDetail.blocksObjectDeleteDesc")}
                                             <span className="mx-1 text-slate-300">|</span>
-                                            <span className="font-medium text-amber-900">Belongs to this object</span> lists metadata that is deleted together with the object and is shown only for context.
+                                            <span className="font-medium text-amber-900">{t("admin.objectDetail.belongsToObject")}</span> {t("admin.objectDetail.belongsToObjectDesc")}
                                         </p>
                                     </div>
                                 </div>
@@ -574,28 +575,28 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
 
                             {recordCount > 0 ? (
                                 <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                                    This object currently has {recordCount} record{recordCount === 1 ? "" : "s"}.
-                                    Records must be removed before the object can be deleted.
+                                    {t("admin.objectDetail.thisObjectHasRecords", { count: recordCount })}
+                                    {t("admin.objectDetail.recordsMustBeRemoved")}
                                 </div>
                             ) : null}
                             <div className="rounded-xl border border-red-200 bg-red-50/40">
                                 <div className="border-b border-red-200 px-5 py-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
-                                            <h3 className="text-sm font-semibold text-red-950">Blocks object delete</h3>
+                                            <h3 className="text-sm font-semibold text-red-950">{t("admin.objectDetail.blocksObjectDelete")}</h3>
                                             <p className="mt-1 text-sm text-red-800">
-                                                External references that must be removed before this object can be deleted.
+                                                {t("admin.objectDetail.blocksDeleteDesc")}
                                             </p>
                                         </div>
                                         <Badge className="border-red-200 bg-white text-red-800 hover:bg-white">
-                                            {objectDeleteDependencies.length} blocker{objectDeleteDependencies.length === 1 ? "" : "s"}
+                                            {t("admin.objectDetail.countBlockers", { count: objectDeleteDependencies.length })}
                                         </Badge>
                                     </div>
                                 </div>
                                 <div className="px-5 py-4">
                                     <DependencyList
                                         dependencies={objectDeleteDependencies}
-                                        emptyMessage="No metadata references are currently blocking object delete."
+                                        emptyMessage={t("admin.objectDetail.noMetadataReferences")}
                                     />
                                 </div>
                             </div>
@@ -603,20 +604,20 @@ export default async function ObjectDetailPage({ params }: { params: Promise<{ i
                                 <div className="border-b border-amber-200 px-5 py-4">
                                     <div className="flex items-center justify-between gap-3">
                                         <div>
-                                            <h3 className="text-sm font-semibold text-amber-950">Belongs to this object</h3>
+                                            <h3 className="text-sm font-semibold text-amber-950">{t("admin.objectDetail.belongsToObject")}</h3>
                                             <p className="mt-1 text-sm text-amber-800">
-                                                Metadata that is deleted together with the object and is shown for context only.
+                                                {t("admin.objectDetail.objectOwnedContextDesc")}
                                             </p>
                                         </div>
                                         <Badge className="border-amber-200 bg-white text-amber-800 hover:bg-white">
-                                            {informationalDependencies.length} item{informationalDependencies.length === 1 ? "" : "s"}
+                                            {t("admin.objectDetail.countItems", { count: informationalDependencies.length })}
                                         </Badge>
                                     </div>
                                 </div>
                                 <div className="px-5 py-4">
                                     <DependencyList
                                         dependencies={informationalDependencies}
-                                        emptyMessage="No object-owned metadata references were indexed."
+                                        emptyMessage={t("admin.objectDetail.noObjectOwned")}
                                     />
                                 </div>
                             </div>

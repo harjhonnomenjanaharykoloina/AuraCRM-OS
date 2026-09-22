@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/i18n/client";
 
 type RegisterFormData = {
     name: string;
@@ -34,9 +35,11 @@ export function CleanMinimalRegister({
     onChange,
     onSubmit,
     ctaHref = "/login",
-    ctaLabel = "Sign in",
+    ctaLabel,
     className,
 }: CleanMinimalRegisterProps) {
+    const t = useTranslations();
+
     return (
         <div className={cn("w-full", className)}>
             <div className="relative mx-auto w-full max-w-md rounded-3xl border border-slate-200/90 bg-white/95 p-8 text-black shadow-[0_22px_55px_-30px_rgba(30,64,175,0.45)] ring-1 ring-white/80 backdrop-blur-sm">
@@ -52,22 +55,22 @@ export function CleanMinimalRegister({
                 <div className="mb-4 flex justify-center">
                     <Image
                         src={process.env.NEXT_PUBLIC_APP_LOGO || "/logo.png"}
-                        alt="App Logo"
+                        alt={t("auth.register.appLogo")}
                         width={128}
                         height={48}
                         className="mx-auto max-h-12 w-auto object-contain"
                     />
                 </div>
 
-                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">Create your AuraCRM account</h1>
+                <h1 className="mb-2 text-center text-2xl font-semibold text-slate-900">{t("auth.register.title")}</h1>
                 <p className="mb-6 text-center text-sm text-slate-500">
-                    Set up your organization and admin account in one step.
+                    {t("auth.register.subtitle")}
                 </p>
 
                 <div className="grid gap-3">
                     <Field
                         icon={<User className="h-4 w-4" />}
-                        placeholder="Full Name"
+                        placeholder={t("auth.register.name")}
                         value={formData.name}
                         error={fieldErrors?.name}
                         isLoading={isLoading}
@@ -76,17 +79,17 @@ export function CleanMinimalRegister({
                     />
                     <Field
                         icon={<User className="h-4 w-4" />}
-                        placeholder="Username"
+                        placeholder={t("auth.register.username")}
                         value={formData.username}
                         error={fieldErrors?.username}
                         isLoading={isLoading}
                         autoComplete="username"
                         onChange={(value) => onChange("username", value)}
                     />
-                    <p className="-mt-1 text-xs text-slate-500">Lowercase letters and numbers only.</p>
+                    <p className="-mt-1 text-xs text-slate-500">{t("auth.register.usernameHelp")}</p>
                     <Field
                         icon={<Building2 className="h-4 w-4" />}
-                        placeholder="Organization Name"
+                        placeholder={t("auth.register.organizationName")}
                         value={formData.organizationName}
                         error={fieldErrors?.organizationName}
                         isLoading={isLoading}
@@ -95,7 +98,7 @@ export function CleanMinimalRegister({
                     />
                     <Field
                         icon={<Mail className="h-4 w-4" />}
-                        placeholder="Email"
+                        placeholder={t("auth.register.email")}
                         type="email"
                         value={formData.email}
                         error={fieldErrors?.email}
@@ -105,7 +108,7 @@ export function CleanMinimalRegister({
                     />
                     <Field
                         icon={<Lock className="h-4 w-4" />}
-                        placeholder="Password"
+                        placeholder={t("auth.register.password")}
                         type="password"
                         value={formData.password}
                         error={fieldErrors?.password}
@@ -121,18 +124,18 @@ export function CleanMinimalRegister({
                     ) : null}
                 </div>
 
-                <Button
+                <Button type="button"
                     onClick={onSubmit}
                     disabled={isLoading}
                     className="mt-4 h-11 w-full rounded-xl bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
-                    {isLoading ? "Creating account..." : "Create Account"}
+                    {isLoading ? t("auth.register.submitButtonLoading") : t("auth.register.submitButton")}
                 </Button>
 
                 <p className="mt-5 text-center text-sm text-slate-500">
-                    Already have an account?{" "}
+                    {t("auth.register.alreadyRegistered")}{" "}
                     <a href={ctaHref} className="font-medium text-primary hover:underline">
-                        {ctaLabel}
+                        {ctaLabel ?? t("auth.register.signIn")}
                     </a>
                 </p>
             </div>

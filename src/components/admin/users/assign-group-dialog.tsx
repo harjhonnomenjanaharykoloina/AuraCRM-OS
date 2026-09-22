@@ -66,7 +66,7 @@ export function AssignGroupDialog({ userId, availableGroups }: AssignGroupDialog
             } else {
                 toast.error(result.error);
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         }
     }

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getSearchableObjects } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
+import { checkRateLimit, dataRateLimiter, tooManyRequestsResponse } from "@/lib/api-rate-limit";
 
 const MAX_RESULTS = 30;
 const MIN_QUERY_LENGTH = 2;
@@ -113,6 +114,11 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: "Invalid session" }, { status: 400 });
         }
 
+        const { allowed, resetAt } = await checkRateLimit(dataRateLimiter, String(userId));
+        if (!allowed) {
+            return tooManyRequestsResponse(resetAt);
+        }
+
         const url = new URL(request.url);
         const query = (url.searchParams.get("q") || "").trim();
         const mode = (url.searchParams.get("mode") || "").toLowerCase();
@@ -168,6 +174,7 @@ export async function GET(request: Request) {
             const buildWhere = (filters: Prisma.RecordWhereInput[]) => ({
                 organizationId,
                 objectDefId: object.id,
+                isDeleted: false,
                 ...(accessFilter ?? {}),
                 OR: filters,
             });
@@ -234,6 +241,7 @@ export async function GET(request: Request) {
                 const where = {
                     organizationId,
                     objectDefId: object.id,
+                    isDeleted: false,
                     ...(accessFilter ?? {}),
                     OR: buildSearchFilters("contains", query, normalizedQuery, primaryFieldId),
                 };

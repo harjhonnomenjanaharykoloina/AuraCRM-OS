@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -6,17 +7,17 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const OPERATOR_LABELS: Record<string, string> = {
-    equals: "Equals",
-    not_equals: "Not Equals",
-    gt: "Greater Than",
-    gte: "Greater Or Equal",
-    lt: "Less Than",
-    lte: "Less Or Equal",
-    contains: "Contains",
-    not_contains: "Does Not Contain",
-    is_blank: "Is Blank",
-    is_not_blank: "Is Not Blank",
+const OPERATOR_KEYS: Record<string, string> = {
+    equals: "admin.ruleOperators.equals",
+    not_equals: "admin.ruleOperators.notEquals",
+    gt: "admin.ruleOperators.greaterThan",
+    gte: "admin.ruleOperators.greaterOrEqual",
+    lt: "admin.ruleOperators.lessThan",
+    lte: "admin.ruleOperators.lessOrEqual",
+    contains: "admin.ruleOperators.contains",
+    not_contains: "admin.ruleOperators.doesNotContain",
+    is_blank: "admin.ruleOperators.isBlank",
+    is_not_blank: "admin.ruleOperators.isNotBlank",
 };
 
 type CriteriaFilter = {
@@ -38,6 +39,7 @@ export default async function AssignmentRuleDetailPage({
 }) {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
     const { objectId, ruleId } = await params;
     const objectDefId = parseInt(objectId, 10);
@@ -90,27 +92,27 @@ export default async function AssignmentRuleDetailPage({
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Rule Summary</CardTitle>
+                    <CardTitle>{t("admin.assignmentRuleDetail.ruleSummary")}</CardTitle>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div>
-                        <div className="text-xs text-muted-foreground">Object</div>
+                        <div className="text-xs text-muted-foreground">{t("admin.assignmentRuleDetail.object")}</div>
                         <div className="text-sm font-medium">{rule.objectDef.label}</div>
                     </div>
                     <div>
-                        <div className="text-xs text-muted-foreground">Target</div>
+                        <div className="text-xs text-muted-foreground">{t("admin.assignmentRuleDetail.target")}</div>
                         <div className="text-sm font-medium">
                             {rule.targetType === "USER"
-                                ? `${rule.targetUser?.name || rule.targetUser?.email || `User #${rule.targetUserId}`} (@${rule.targetUser?.username || "unknown"})`
-                                : rule.targetQueue?.name || `Queue #${rule.targetQueueId}`}
+                                ? `${rule.targetUser?.name || rule.targetUser?.email || t("shared.common.userFallback", { id: rule.targetUserId })} (@${rule.targetUser?.username || t("shared.common.unknown")})`
+                                : rule.targetQueue?.name || t("shared.common.queueFallback", { id: rule.targetQueueId })}
                         </div>
                     </div>
                     <div>
-                        <div className="text-xs text-muted-foreground">Status</div>
-                        <div className="text-sm font-medium">{rule.isActive ? "Active" : "Inactive"}</div>
+                        <div className="text-xs text-muted-foreground">{t("admin.assignmentRuleDetail.status")}</div>
+                        <div className="text-sm font-medium">{rule.isActive ? t("shared.status.active") : t("shared.status.inactive")}</div>
                     </div>
                     <div>
-                        <div className="text-xs text-muted-foreground">Order</div>
+                        <div className="text-xs text-muted-foreground">{t("admin.assignmentRuleDetail.order")}</div>
                         <div className="text-sm font-medium">{rule.sortOrder}</div>
                     </div>
                 </CardContent>
@@ -118,14 +120,14 @@ export default async function AssignmentRuleDetailPage({
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Criteria</CardTitle>
+                    <CardTitle>{t("admin.assignmentRuleDetail.criteria")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {filters.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">No criteria set. This rule matches all records.</div>
+                        <div className="text-sm text-muted-foreground">{t("admin.assignmentRuleDetail.noCriteria")}</div>
                     ) : (
                         <>
-                            <div className="text-xs text-muted-foreground">Match Logic: {logic}</div>
+                            <div className="text-xs text-muted-foreground">{t("admin.assignmentRuleDetail.matchLogic", { logic })}</div>
                             <div className="space-y-3">
                                 {filters.map((filter, index) => {
                                     const field =
@@ -134,7 +136,9 @@ export default async function AssignmentRuleDetailPage({
                                             : filter.field
                                                 ? fieldByApi.get(filter.field)
                                                 : null;
-                                    const operatorLabel = filter.operator ? OPERATOR_LABELS[filter.operator] || filter.operator : "Equals";
+                                    const operatorLabel = filter.operator
+                    ? (OPERATOR_KEYS[filter.operator] ? t(OPERATOR_KEYS[filter.operator]) : filter.operator)
+                    : t("admin.ruleOperators.equals");
                                     const valueLabel =
                                         filter.operator === "is_blank" || filter.operator === "is_not_blank"
                                             ? "-"
@@ -146,8 +150,8 @@ export default async function AssignmentRuleDetailPage({
 
                                     return (
                                         <div key={`${field?.id ?? filter.field ?? index}`} className="rounded-lg border p-3">
-                                            <div className="text-xs text-muted-foreground">Condition {index + 1}</div>
-                                            <div className="text-sm font-medium">{field?.label ?? filter.field ?? "Unknown Field"}</div>
+                                            <div className="text-xs text-muted-foreground">{t("admin.assignmentRuleDetail.condition", { count: index + 1 })}</div>
+                                            <div className="text-sm font-medium">{field?.label ?? filter.field ?? t("admin.assignmentRuleDetail.unknownField")}</div>
                                             <div className="text-xs text-muted-foreground">
                                                 {operatorLabel} {valueLabel && valueLabel !== "-" ? `"${valueLabel}"` : ""}
                                             </div>

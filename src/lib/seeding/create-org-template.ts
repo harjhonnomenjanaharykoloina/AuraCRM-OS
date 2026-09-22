@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { normalizePicklistApiName } from "@/lib/api-names";
 import { USER_ID_FIELD_API_NAME, USER_OBJECT_API_NAME } from "@/lib/user-companion";
+import { createDefaultAppAndPermissionSets } from "@/lib/seeding/create-default-app";
 
 export async function createOrgTemplate(organizationId: number) {
     return await db.$transaction(async (tx) => {
@@ -187,7 +188,7 @@ export async function createOrgTemplate(organizationId: number) {
             where: { objectDefId: opportunityObj.id, apiName: "stage" },
             select: { id: true },
         });
-        await createPicklistOptions(opportunityStageField?.id, ["Prospecting", "Negotiation", "Closed Won", "Closed Lost"]);
+        await createPicklistOptions(opportunityStageField?.id, ["Lead", "Qualified", "Demo", "Proposal", "Negotiation", "Won", "Lost"]);
         await createDefaultListView(opportunityObj.id, opportunityObj.pluralLabel);
 
         // 4. Case Object
@@ -250,6 +251,92 @@ export async function createOrgTemplate(organizationId: number) {
         await createPicklistOptions(casePriorityField?.id, ["Low", "Medium", "High"]);
         await createDefaultListView(caseObj.id, caseObj.pluralLabel);
 
-        return { userObj, contactObj, companyObj, opportunityObj, caseObj };
+        // 5. Lead Object
+        const leadObj = await tx.objectDefinition.create({
+            data: {
+                organizationId,
+                apiName: "lead",
+                label: "Lead",
+                pluralLabel: "Leads",
+                icon: "UserPlus",
+                isSystem: true,
+                description: "Represents a potential customer.",
+            },
+        });
+
+        await tx.fieldDefinition.createMany({
+            data: [
+                { objectDefId: leadObj.id, apiName: "name", label: "Lead Name", type: "Text", required: true },
+                { objectDefId: leadObj.id, apiName: "first_name", label: "First Name", type: "Text", required: true },
+                { objectDefId: leadObj.id, apiName: "last_name", label: "Last Name", type: "Text", required: true },
+                { objectDefId: leadObj.id, apiName: "email", label: "Email", type: "Email" },
+                { objectDefId: leadObj.id, apiName: "phone", label: "Phone", type: "Phone" },
+                { objectDefId: leadObj.id, apiName: "title", label: "Title", type: "Text" },
+                { objectDefId: leadObj.id, apiName: "company_name", label: "Company Name", type: "Text" },
+                { objectDefId: leadObj.id, apiName: "company", label: "Company", type: "Lookup", lookupTargetId: companyObj.id },
+                { objectDefId: leadObj.id, apiName: "contact", label: "Contact", type: "Lookup", lookupTargetId: contactObj.id },
+                { objectDefId: leadObj.id, apiName: "status", label: "Status", type: "Picklist", required: true },
+                { objectDefId: leadObj.id, apiName: "is_converted", label: "Is Converted", type: "Checkbox" },
+            ],
+        });
+        const leadStatusField = await tx.fieldDefinition.findFirst({
+            where: { objectDefId: leadObj.id, apiName: "status" },
+            select: { id: true },
+        });
+        await createPicklistOptions(leadStatusField?.id, ["New", "Working", "Converted", "Rejected"]);
+        await createDefaultListView(leadObj.id, leadObj.pluralLabel);
+
+        // 6. Task Object
+        const taskObj = await tx.objectDefinition.create({
+            data: {
+                organizationId,
+                apiName: "task",
+                label: "Task",
+                pluralLabel: "Tasks",
+                icon: "CheckSquare",
+                isSystem: true,
+                description: "Represents a task or to-do item.",
+            },
+        });
+
+        await tx.fieldDefinition.createMany({
+            data: [
+                { objectDefId: taskObj.id, apiName: "name", label: "Task Name", type: "Text", required: true },
+                { objectDefId: taskObj.id, apiName: "description", label: "Description", type: "TextArea" },
+                { objectDefId: taskObj.id, apiName: "status", label: "Status", type: "Picklist", required: true },
+                { objectDefId: taskObj.id, apiName: "lead", label: "Lead", type: "Lookup", lookupTargetId: leadObj.id },
+                { objectDefId: taskObj.id, apiName: "contact", label: "Contact", type: "Lookup", lookupTargetId: contactObj.id },
+            ],
+        });
+        const taskStatusField = await tx.fieldDefinition.findFirst({
+            where: { objectDefId: taskObj.id, apiName: "status" },
+            select: { id: true },
+        });
+        await createPicklistOptions(taskStatusField?.id, ["Not Started", "In Progress", "Completed", "Deferred"]);
+        await createDefaultListView(taskObj.id, taskObj.pluralLabel);
+
+        const seededObjects: Array<{ id: number; apiName: string }> = [
+            { id: userObj.id, apiName: USER_OBJECT_API_NAME },
+            { id: companyObj.id, apiName: companyObj.apiName },
+            { id: contactObj.id, apiName: contactObj.apiName },
+            { id: opportunityObj.id, apiName: opportunityObj.apiName },
+            { id: caseObj.id, apiName: caseObj.apiName },
+            { id: leadObj.id, apiName: leadObj.apiName },
+            { id: taskObj.id, apiName: taskObj.apiName },
+        ];
+
+        const appSetup = await createDefaultAppAndPermissionSets(tx, organizationId, seededObjects);
+
+        return {
+            userObj,
+            contactObj,
+            companyObj,
+            opportunityObj,
+            caseObj,
+            leadObj,
+            taskObj,
+            app: appSetup.app,
+            ownerPermissionSet: appSetup.permissionSets.Owner,
+        };
     });
 }

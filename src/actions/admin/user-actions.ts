@@ -15,7 +15,10 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs"
+import { BCRYPT_COST } from "@/lib/crypto";
+import { passwordSchema } from "@/lib/password-validation";
+
 import {
     ensureUserCompanionRecord,
     USER_ID_FIELD_API_NAME,
@@ -346,7 +349,7 @@ const inviteUserSchema = z.object({
         .regex(/^[a-z0-9]+$/, "Username must be lowercase letters and numbers only")
         .transform((value) => value.toLowerCase()),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: passwordSchema,
     userType: z.enum(["standard", "admin"]),
 });
 
@@ -389,7 +392,7 @@ export async function inviteUser(data: z.infer<typeof inviteUserSchema>) {
         if (userType !== "admin") throw new Error("Unauthorized");
 
         const validated = inviteUserSchema.parse(data);
-        const hashedPassword = await bcrypt.hash(validated.password, 10);
+        const hashedPassword = await bcrypt.hash(validated.password, BCRYPT_COST);
 
         const existingEmail = await db.user.findFirst({
             where: { organizationId, email: validated.email },
@@ -433,7 +436,8 @@ export async function inviteUser(data: z.infer<typeof inviteUserSchema>) {
             }
             return { success: false, error: "A user with this information already exists." };
         }
-        return { success: false, error: error.message };
+        console.error("Create managed user error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -497,7 +501,8 @@ export async function assignPermissionSet(userId: number, permissionSetId: numbe
         if (error.code === "P2002") {
             return { success: false, error: "This permission set is already assigned." };
         }
-        return { success: false, error: error.message };
+        console.error("Assign permission set error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -548,7 +553,8 @@ export async function removePermissionAssignment(userId: number, permissionSetId
         revalidatePath(`/admin/users/${userId}`);
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message };
+        console.error("Remove permission assignment error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -634,7 +640,8 @@ export async function assignPermissionSetGroup(userId: number, groupId: number) 
         revalidatePath(`/admin/users/${userId}`);
         return { success: true, assignedCount: permissionSetIds.length };
     } catch (error: any) {
-        return { success: false, error: error.message };
+        console.error("Assign permission set group error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -706,7 +713,8 @@ export async function updateManagedUserAccount(
             }
             return { success: false, error: "A user with this information already exists." };
         }
-        return { success: false, error: error.message };
+        console.error("Update managed user account error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -826,7 +834,8 @@ export async function updateManagedUserProfile(
             await enforceUniqueFields(record.objectDef, recordData, record.id);
             await validateLookupValues(editableFields, recordData, organizationId);
         } catch (error: any) {
-            return { success: false, error: error.message };
+            console.error("Validate record data error:", error);
+            return { success: false, error: "An unexpected error occurred. Please try again." };
         }
 
         const valueMap = buildValueMap(
@@ -929,7 +938,8 @@ export async function updateManagedUserProfile(
             }
             return { success: false, error: "A user with this information already exists." };
         }
-        return { success: false, error: error.message || "Failed to update user profile." };
+        console.error("Update managed user profile error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -1009,7 +1019,8 @@ export async function updateManagedUserRecord(userId: number, data: Record<strin
             await enforceUniqueFields(record.objectDef, data, record.id);
             await validateLookupValues(editableFields, data, organizationId);
         } catch (error: any) {
-            return { success: false, error: error.message };
+            console.error("Validate record data error:", error);
+            return { success: false, error: "An unexpected error occurred. Please try again." };
         }
 
         const valueMap = buildValueMap(
@@ -1081,7 +1092,8 @@ export async function updateManagedUserRecord(userId: number, data: Record<strin
         revalidatePath("/app");
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message || "Failed to update user record." };
+        console.error("Update managed user record error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 

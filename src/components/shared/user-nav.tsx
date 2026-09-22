@@ -18,6 +18,8 @@ import {
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "@/i18n/client";
+import { LanguageSelector } from "@/components/shared/language-selector";
 
 interface UserNavProps {
     user: {
@@ -30,6 +32,7 @@ interface UserNavProps {
 
 export function UserNav({ user, profileHref }: UserNavProps) {
     const router = useRouter();
+    const t = useTranslations();
 
     const handleSignOut = async () => {
         await authClient.signOut();
@@ -60,16 +63,16 @@ export function UserNav({ user, profileHref }: UserNavProps) {
                 <DropdownMenuGroup>
                     {profileHref ? (
                         <DropdownMenuItem asChild>
-                            <Link href={profileHref}>Profile</Link>
+                            <Link href={profileHref}>{t("shared.nav.profile")}</Link>
                         </DropdownMenuItem>
                     ) : null}
-                    <DropdownMenuItem>
-                        Settings
-                    </DropdownMenuItem>
                 </DropdownMenuGroup>
+                <div className="px-3 py-2">
+                    <LanguageSelector />
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
-                    Log out
+                    {t("shared.nav.logOut")}
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

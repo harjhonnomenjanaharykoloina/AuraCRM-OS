@@ -5,6 +5,7 @@ import { LogIn, Lock, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "@/i18n/client";
 
 type CleanMinimalSignInProps = {
     identifier: string;
@@ -28,9 +29,11 @@ export function CleanMinimalSignIn({
     onIdentifierChange,
     onPasswordChange,
     ctaHref = "/register",
-    ctaLabel = "Create an account",
+    ctaLabel,
     className,
 }: CleanMinimalSignInProps) {
+    const t = useTranslations();
+
     return (
         <div className={cn("w-full", className)}>
             <div className="relative mx-auto w-full max-w-sm rounded-3xl border border-slate-200/90 bg-white/95 p-8 text-black shadow-[0_22px_55px_-30px_rgba(30,64,175,0.45)] ring-1 ring-white/80 backdrop-blur-sm">
@@ -41,9 +44,9 @@ export function CleanMinimalSignIn({
                     </div>
                 </div>
 
-                <h1 className="select-none mb-2 text-center text-2xl font-semibold text-slate-900">Sign in to AuraCRM</h1>
+                <h1 className="select-none mb-2 text-center text-2xl font-semibold text-slate-900">{t("auth.signIn.title")}</h1>
                 <p className="select-none cursor-default mb-6 text-center text-sm text-slate-500">
-                    Use your username and password to access your workspace.
+                    {t("auth.signIn.helpText")}
                 </p>
 
                 <div className="flex flex-col gap-3">
@@ -52,7 +55,7 @@ export function CleanMinimalSignIn({
                             <User className="h-4 w-4" />
                         </span>
                         <Input
-                            placeholder="Username"
+                            placeholder={t("auth.signIn.username")}
                             type="text"
                             value={identifier}
                             autoComplete="username"
@@ -67,7 +70,7 @@ export function CleanMinimalSignIn({
                             <Lock className="h-4 w-4" />
                         </span>
                         <Input
-                            placeholder="Password"
+                            placeholder={t("auth.signIn.password")}
                             type="password"
                             value={password}
                             autoComplete="current-password"
@@ -89,13 +92,13 @@ export function CleanMinimalSignIn({
                     disabled={isLoading || submitDisabled}
                     className="mt-4 h-11 w-full rounded-xl bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
                 >
-                    {isLoading ? "Signing in..." : "Get Started"}
+                    {isLoading ? t("auth.signIn.submitButtonLoading") : t("auth.signIn.submitButton")}
                 </Button>
 
                 <p className="select-none cursor-default mt-5 text-center text-sm text-slate-500">
-                    New here?{" "}
+                    {t("auth.signIn.newHere")}{" "}
                     <a href={ctaHref} className="font-medium text-primary hover:underline">
-                        {ctaLabel}
+                        {ctaLabel ?? t("auth.signIn.createAccount")}
                     </a>
                 </p>
             </div>

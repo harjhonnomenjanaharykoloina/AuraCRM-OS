@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { poppins as headingFont } from "@/lib/fonts";
 import { ArrowRight, LogIn, Menu, Sparkles } from "lucide-react";
@@ -14,20 +15,24 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useTranslations } from "@/i18n/client";
+import { LanguageSelector } from "@/components/shared/language-selector";
 
 export function PublicSiteHeader() {
+    const t = useTranslations();
+    const navT = useTranslations("landing.nav");
     const pathname = usePathname();
     const navLinks = useMemo(
         () => [
-            { href: "/#about", label: "About", id: "about" },
-            { href: "/#modules", label: "Modules", id: "modules" },
-            { href: "/#stack", label: "Tech Stack", id: "stack" },
-            { href: "/#architecture", label: "Architecture", id: "architecture" },
+            { href: "/#features", label: navT("features"), id: "features" },
+            { href: "/#solutions", label: navT("solutions"), id: "solutions" },
+            { href: "/#pricing", label: navT("pricing"), id: "pricing" },
+            { href: "/#resources", label: navT("resources"), id: "resources" },
         ],
-        []
+        [navT]
     );
 
-    const [activeHref, setActiveHref] = useState(pathname === "/" ? "/#about" : pathname);
+    const [activeHref, setActiveHref] = useState(pathname === "/" ? "/#features" : pathname);
     const [hasHydrated, setHasHydrated] = useState(false);
 
     useEffect(() => {
@@ -42,7 +47,7 @@ export function PublicSiteHeader() {
 
         const getHashHref = () => {
             if (window.location.hash) return `/${window.location.hash}`;
-            return "/#about";
+            return "/#features";
         };
 
         setActiveHref(getHashHref());
@@ -100,13 +105,13 @@ export function PublicSiteHeader() {
         <header className="sticky top-4 z-50 px-3 sm:px-5 lg:px-7">
             <div className="mx-auto flex max-w-7xl items-center justify-between rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-3 shadow-[0_10px_35px_-18px_rgba(37,99,235,0.35)] backdrop-blur-sm supports-[backdrop-filter]:bg-white/80 sm:px-5 lg:px-6">
                 <Link href="/" className="group flex items-center gap-2.5">
-                    <img src="/logo.png" alt="AuraCRM" className="h-9 w-9" />
+                    <Image src="/logo.png" alt="AuraCRM" className="h-9 w-9" width={36} height={36} />
                     <div className="flex flex-col select-none relative z-10">
                         <span className={`pointer-events-none ${headingFont.className} bg-gradient-to-r from-sky-700 to-blue-700 bg-clip-text text-xl font-bold leading-none text-transparent`}>
-                            AuraCRM
+                            {t("public.header.appName")}
                         </span>
                         <span className="pointer-events-none hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:block">
-                            Metadata CRM
+                            {t("public.header.metadataCrm")}
                         </span>
                     </div>
                 </Link>
@@ -126,20 +131,22 @@ export function PublicSiteHeader() {
                 </nav>
 
                 <div className="hidden items-center gap-2 md:flex">
-                    <Link href="/login">
-                        <Button variant="ghost" size="sm" className="cursor-pointer text-slate-700 hover:bg-slate-100">
+                    <Button asChild variant="ghost" size="sm" className="cursor-pointer text-slate-700 hover:bg-slate-100">
+                        <Link href="/login">
                             <LogIn className="mr-1.5 h-4 w-4" />
-                            Login
-                        </Button>
-                    </Link>
+                            {navT("signIn")}
+                        </Link>
+                    </Button>
 
-                    <Link href="/register">
-                        <Button size="sm" className="cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary/90">
+                    <Button asChild size="sm" className="cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary/90">
+                        <Link href="/register">
                             <Sparkles className="mr-1.5 h-4 w-4" />
-                            Register
+                            {navT("getStarted")}
                             <ArrowRight className="ml-1.5 h-4 w-4" />
-                        </Button>
-                    </Link>
+                        </Link>
+                    </Button>
+
+                    <LanguageSelector />
                 </div>
 
                 <div className="md:hidden">
@@ -155,7 +162,7 @@ export function PublicSiteHeader() {
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 rounded-xl border-slate-200">
-                                <DropdownMenuLabel>Navigation</DropdownMenuLabel>
+                                <DropdownMenuLabel>{t("shared.nav.navigation")}</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 {navLinks.map((link) => (
                                     <DropdownMenuItem
@@ -173,13 +180,17 @@ export function PublicSiteHeader() {
                                     <Link href="/login">
                                         <span className="inline-flex items-center gap-2">
                                             <LogIn className="h-4 w-4" />
-                                            Login
+                                            {navT("signIn")}
                                         </span>
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                    <Link href="/register">Register</Link>
+                                    <Link href="/register">{navT("getStarted")}</Link>
                                 </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <div className="px-3 py-2">
+                                    <LanguageSelector />
+                                </div>
                             </DropdownMenuContent>
                         </DropdownMenu>
                     )}

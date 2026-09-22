@@ -3,30 +3,8 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { sanitizeUserObjectPermissions } from "@/lib/permissions";
 import { z } from "zod";
-import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
-
-function sanitizeUserObjectPermissions<T extends {
-    allowRead: boolean;
-    allowCreate: boolean;
-    allowEdit: boolean;
-    allowDelete: boolean;
-    allowViewAll: boolean;
-    allowModifyAll: boolean;
-    allowModifyListViews: boolean;
-}>(objectApiName: string, permissions: T): T {
-    if (objectApiName !== USER_OBJECT_API_NAME) {
-        return permissions;
-    }
-
-    return {
-        ...permissions,
-        allowCreate: false,
-        allowEdit: false,
-        allowDelete: false,
-        allowModifyAll: false,
-    };
-}
 
 async function getUserContext() {
     const session = await auth();

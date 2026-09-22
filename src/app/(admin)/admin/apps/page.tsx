@@ -1,13 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
+import { getT } from "@/i18n/server";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Settings2, Plus } from "lucide-react";
@@ -15,6 +8,7 @@ import { Settings2, Plus } from "lucide-react";
 export default async function AppsPage() {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
 
     const apps = await db.appDefinition.findMany({
@@ -26,15 +20,15 @@ export default async function AppsPage() {
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">App Manager</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t("admin.apps.title")}</h1>
                     <p className="text-muted-foreground">
-                        Create and manage apps to organize your objects.
+                        {t("admin.apps.listDescription")}
                     </p>
                 </div>
                 <Button asChild className="shadow-sm">
                     <Link href="/admin/apps/new">
                         <Plus className="mr-2 h-4 w-4" />
-                        New App
+                        {t("admin.apps.newApp")}
                     </Link>
                 </Button>
             </div>
@@ -66,11 +60,11 @@ export default async function AppsPage() {
                                         {app.name}
                                     </Link>
                                 </h3>
-                                <p className="text-sm text-slate-500 mt-1 line-clamp-2 pr-4">{app.description || "No description provided."}</p>
+                                <p className="text-sm text-slate-500 mt-1 line-clamp-2 pr-4">{app.description || t("admin.apps.noDescription")}</p>
                             </div>
 
                             <div className="pt-2 flex items-center gap-2 text-xs font-medium text-slate-400">
-                                <span>Application</span>
+                                <span>{t("admin.apps.applicationType")}</span>
                             </div>
                         </div>
                     </div>
@@ -81,11 +75,11 @@ export default async function AppsPage() {
                         <div className="mx-auto h-12 w-12 bg-white rounded-full border shadow-sm flex items-center justify-center mb-4">
                             <Plus className="h-6 w-6 text-slate-400" />
                         </div>
-                        <h3 className="font-medium text-slate-900">No apps created</h3>
-                        <p className="mt-1 text-sm">Get started by creating your first application.</p>
+                        <h3 className="font-medium text-slate-900">{t("admin.apps.noAppsCreated")}</h3>
+                        <p className="mt-1 text-sm">{t("admin.apps.getStarted")}</p>
                         <Button asChild variant="link" className="mt-2 text-indigo-600">
                             <Link href="/admin/apps/new">
-                                Create App
+                                {t("admin.apps.createApp")}
                             </Link>
                         </Button>
                     </div>

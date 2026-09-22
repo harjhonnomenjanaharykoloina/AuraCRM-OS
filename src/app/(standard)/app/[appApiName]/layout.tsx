@@ -1,8 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { redirect } from "next/navigation";
-import { AppHeader } from "@/components/standard/layout/app-header";
-import { StandardSidebar } from "@/components/standard/layout/standard-sidebar";
+import { StandardShell } from "@/components/standard/layout/standard-shell";
 import { getAvailableApps, getReadableObjectIds } from "@/lib/permissions";
 import { getUserCompanionRecordId } from "@/lib/user-companion";
 
@@ -49,20 +48,16 @@ export default async function AppIdLayout({
 
     return (
         <div className="flex min-h-screen flex-col bg-background">
-            <AppHeader
+            <StandardShell
                 apps={apps}
                 currentAppApiName={currentApp.apiName}
                 user={user}
                 navItems={navItems}
                 isAdmin={isAdmin}
                 profileHref={profileHref}
-            />
-            <div className="flex min-h-0 flex-1">
-                <StandardSidebar currentAppApiName={currentApp.apiName} navItems={navItems} />
-                <main className="min-w-0 flex-1 overflow-auto bg-muted/10 p-4 md:p-6">
-                    <div className="mx-auto w-full max-w-7xl">{children}</div>
-                </main>
-            </div>
+            >
+                {children}
+            </StandardShell>
         </div>
     );
 }

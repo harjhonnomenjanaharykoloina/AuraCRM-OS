@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import {
     Table,
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 export default async function QueuesPage() {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
 
     const queues = await db.queue.findMany({
@@ -39,16 +41,16 @@ export default async function QueuesPage() {
                                 <Inbox className="h-6 w-6" />
                             </span>
                             <div>
-                                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Queues</h1>
+                                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t("admin.queues.title")}</h1>
                                 <p className="text-sm text-slate-600">
-                                    Assignment buckets where new work waits to be picked up.
+                                    {t("admin.queues.description")}
                                 </p>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">Read-only for members</Badge>
-                            <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">Notifications on arrival</Badge>
-                            <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">Global across objects</Badge>
+                            <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">{t("admin.queues.badges.readOnly")}</Badge>
+                            <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">{t("admin.queues.badges.notifications")}</Badge>
+                            <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">{t("admin.queues.badges.global")}</Badge>
                         </div>
                     </div>
                     <CreateQueueDialog />
@@ -62,9 +64,9 @@ export default async function QueuesPage() {
                             <Workflow className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Assignment Rules</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.queues.features.assignmentRules.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Records can be routed into queues on create.
+                                {t("admin.queues.features.assignmentRules.description")}
                             </p>
                         </div>
                     </div>
@@ -75,9 +77,9 @@ export default async function QueuesPage() {
                             <Bell className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Instant Alerts</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.queues.features.instantAlerts.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Members get notified when work arrives.
+                                {t("admin.queues.features.instantAlerts.description")}
                             </p>
                         </div>
                     </div>
@@ -88,9 +90,9 @@ export default async function QueuesPage() {
                             <UserCheck className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Claim to Edit</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.queues.features.claimToEdit.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Queue ownership stays read-only until reassigned.
+                                {t("admin.queues.features.claimToEdit.description")}
                             </p>
                         </div>
                     </div>
@@ -101,10 +103,10 @@ export default async function QueuesPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Members</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead>{t("shared.common.name")}</TableHead>
+                            <TableHead>{t("shared.common.description")}</TableHead>
+                            <TableHead>{t("admin.queues.table.members")}</TableHead>
+                            <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -120,7 +122,7 @@ export default async function QueuesPage() {
                                 <TableCell>{queue._count.members}</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="sm" asChild>
-                                        <Link href={`/admin/queues/${queue.id}`}>Manage</Link>
+                                        <Link href={`/admin/queues/${queue.id}`}>{t("admin.queues.manage")}</Link>
                                     </Button>
                                 </TableCell>
                             </TableRow>
@@ -128,7 +130,7 @@ export default async function QueuesPage() {
                         {queues.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                    No queues found. Create one to get started.
+                                    {t("admin.queues.noQueuesFound")}
                                 </TableCell>
                             </TableRow>
                         )}

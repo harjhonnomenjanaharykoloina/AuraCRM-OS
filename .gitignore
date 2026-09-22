@@ -48,3 +48,7 @@ next-env.d.ts
 
 # OpenNext / Cloudflare build artifacts
 /.open-next/
+.wrangler/
+
+# Docker
+docker-compose.override.yml

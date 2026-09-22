@@ -118,10 +118,15 @@ export default async function ImportJobDetailPage({
             <div className="rounded-xl border bg-white shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Failed Rows (up to 200)</h2>
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/app/${appApiName}/${objectApiName}/import/${job.id}/errors`}>
-                            Download Errors CSV
-                        </Link>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                            window.location.href = `/app/${appApiName}/${objectApiName}/import/${job.id}/errors`;
+                        }}
+                    >
+                        Download Errors CSV
                     </Button>
                 </div>
                 {failedRows.length === 0 ? (

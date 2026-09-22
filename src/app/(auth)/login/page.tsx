@@ -95,7 +95,6 @@ export default function LoginPage() {
                     setError(null);
                 }}
                 ctaHref="/register"
-                ctaLabel="Create an account"
             />
         </form>
     );

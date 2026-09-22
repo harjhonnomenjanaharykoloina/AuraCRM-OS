@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
-import { resolveStoragePath } from "@/lib/file-storage";
+import { deleteFileSafe, resolveStoragePath } from "@/lib/file-storage";
+import { checkRateLimit, dataRateLimiter, tooManyRequestsResponse } from "@/lib/api-rate-limit";
 import { promises as fs } from "fs";
 
 export const runtime = "nodejs";
@@ -30,6 +31,11 @@ export async function GET(
 
         if (Number.isNaN(userId) || Number.isNaN(organizationId) || Number.isNaN(attachmentId)) {
             return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+        }
+
+        const { allowed, resetAt } = await checkRateLimit(dataRateLimiter, String(userId));
+        if (!allowed) {
+            return tooManyRequestsResponse(resetAt);
         }
 
         const fileAttachmentDelegate = (db as any).fileAttachment;
@@ -99,5 +105,102 @@ export async function GET(
     } catch (error) {
         console.error("File download error:", error);
         return NextResponse.json({ error: "Failed to download file." }, { status: 500 });
+    }
+}
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const session = await auth();
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        const user = session.user as any;
+        const userId = parseInt(user.id);
+        const organizationId = parseInt(user.organizationId);
+        const { id } = await params;
+        const attachmentId = Number(id);
+
+        if (Number.isNaN(userId) || Number.isNaN(organizationId) || Number.isNaN(attachmentId)) {
+            return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+        }
+
+        const { allowed, resetAt } = await checkRateLimit(dataRateLimiter, String(userId));
+        if (!allowed) {
+            return tooManyRequestsResponse(resetAt);
+        }
+
+        const fileAttachmentDelegate = (db as any).fileAttachment;
+        if (!fileAttachmentDelegate?.findFirst) {
+            return NextResponse.json(
+                { error: "File storage not initialized. Run prisma generate/migrate." },
+                { status: 500 },
+            );
+        }
+
+        const attachment = await fileAttachmentDelegate.findFirst({
+            where: { id: attachmentId, organizationId },
+            include: {
+                record: {
+                    select: {
+                        id: true,
+                        objectDef: { select: { apiName: true } },
+                        backingUserId: true,
+                    },
+                },
+            },
+        });
+
+        if (!attachment) {
+            return NextResponse.json({ error: "File not found" }, { status: 404 });
+        }
+
+        const objectApiName = attachment.record.objectDef.apiName;
+        const isOwnUserRecord =
+            objectApiName === "user" && attachment.record.backingUserId === userId;
+        const isAdminManagingUserRecord =
+            objectApiName === "user" && user.userType === "admin" && !!attachment.record.backingUserId;
+
+        const canModifyAll = await checkPermission(userId, organizationId, objectApiName, "modifyAll");
+        if (!canModifyAll && !isOwnUserRecord && !isAdminManagingUserRecord) {
+            const canEdit = await checkPermission(userId, organizationId, objectApiName, "edit");
+            if (!canEdit) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+
+            const queueIds = await getUserQueueIds(userId);
+            const userGroupId = (await db.user.findUnique({
+                where: { id: userId },
+                select: { groupId: true },
+            }))?.groupId ?? null;
+            const accessFilter = buildRecordAccessFilter(userId, queueIds, userGroupId, "edit");
+            const accessible = await db.record.findFirst({
+                where: {
+                    id: attachment.record.id,
+                    organizationId,
+                    isDeleted: false,
+                    ...accessFilter,
+                },
+                select: { id: true },
+            });
+            if (!accessible) {
+                return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            }
+        }
+
+        if (attachment.storagePath) {
+            const absolutePath = resolveStoragePath(attachment.storagePath);
+            await deleteFileSafe(absolutePath);
+        }
+
+        await fileAttachmentDelegate.delete({ where: { id: attachment.id } });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("File delete error:", error);
+        return NextResponse.json({ error: "Failed to delete file." }, { status: 500 });
     }
 }

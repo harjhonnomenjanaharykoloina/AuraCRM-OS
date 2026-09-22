@@ -1,12 +1,14 @@
 "use client";
 
-import { useBuilderStore, WidgetConfig, validateWidget } from "./builder-store";
+import { useBuilderStore, validateWidget } from "./builder-store";
 import { cn } from "@/lib/utils";
 import { GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useTranslations } from "@/i18n/client";
 
 export function Canvas() {
+    const t = useTranslations();
     const { widgets, selectWidget, selectedWidgetId, removeWidget, moveWidget } = useBuilderStore();
     const selectedWidget = widgets.find((w) => w.id === selectedWidgetId);
 
@@ -32,7 +34,7 @@ export function Canvas() {
         <div className="grid grid-cols-12 gap-4 pb-20">
             {widgets.length === 0 && (
                 <div className="col-span-12 h-64 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-muted-foreground bg-slate-50/50">
-                    Select a widget from the toolbox to start
+                    {t("admin.builder.canvasEmpty")}
                 </div>
             )}
 
@@ -60,7 +62,7 @@ export function Canvas() {
                         if (selectedWidget && selectedWidget.id !== widget.id) {
                             const errors = validateWidget(selectedWidget);
                             if (errors.length > 0) {
-                                toast.error(`Fix required fields before switching: ${errors[0]}`);
+                                toast.error(t("admin.builder.switchValidationError", { error: errors[0] }));
                                 return;
                             }
                         }
@@ -92,7 +94,7 @@ export function Canvas() {
                             <span className="font-semibold text-slate-900">{widget.title}</span>
                             <span className="text-xs uppercase tracking-wider">{widget.type}</span>
                             {validateWidget(widget).length > 0 && (
-                                <span className="text-[10px] text-amber-600 mt-1">Missing required fields</span>
+                                <span className="text-[10px] text-amber-600 mt-1">{t("admin.builder.canvasMissingFields")}</span>
                             )}
                         </div>
                     </div>

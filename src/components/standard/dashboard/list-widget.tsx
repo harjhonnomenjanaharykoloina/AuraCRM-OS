@@ -61,13 +61,11 @@ export function ListWidget({ title, appApiName, config }: ListWidgetProps) {
         }
         fetchData();
     }, [
+        config,
         config.objectDefId,
         config.limit,
         config.sortDirection,
-        JSON.stringify(config.fieldDefIds),
-        JSON.stringify(config.systemFields),
         config.sortSystemField,
-        JSON.stringify(config.filters),
         config.filterLogic,
         config.filterExpression,
         config.ownerScope,

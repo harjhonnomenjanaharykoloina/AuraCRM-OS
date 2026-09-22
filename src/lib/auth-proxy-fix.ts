@@ -1,6 +1,6 @@
-import bcryptjs from "bcryptjs";
-import { User } from "@prisma/client";
-import { db } from "@/lib/db";
+import bcryptjs from "bcryptjs"
+import { User } from "@prisma/client"
+import { db } from "@/lib/db"
 
 export async function legacySignIn(
     username: string,
@@ -8,49 +8,30 @@ export async function legacySignIn(
 ): Promise<User | null> {
     const user = await db.user.findUnique({
         where: { username },
-    });
+    })
 
     if (!user) {
-        return null;
+        return null
     }
 
-    const usernameAccount = await db.account.findFirst({
+    // Better Auth's username plugin uses providerId "credential" (via findCredentialAccount)
+    const account = await db.account.findFirst({
         where: {
             userId: user.id,
-            providerId: "username",
+            providerId: "credential",
         },
-    });
+    })
 
-    if (!usernameAccount || !usernameAccount.password) {
-        return null;
+    if (!account || !account.password) {
+        return null
     }
 
-    const passwordHash = usernameAccount.password;
-
-    const passwordValid = await bcryptjs.compare(password, passwordHash);
+    const passwordHash = account.password
+    const passwordValid = await bcryptjs.compare(password, passwordHash)
 
     if (!passwordValid) {
-        return null;
+        return null
     }
 
-    await db.account.upsert({
-        where: {
-            providerId_accountId: {
-                providerId: "credential",
-                accountId: String(user.id),
-            },
-        },
-        update: {
-            password: passwordHash,
-        },
-        create: {
-            id: crypto.randomUUID(),
-            userId: user.id,
-            accountId: String(user.id),
-            providerId: "credential",
-            password: passwordHash,
-        },
-    });
-
-    return user;
+    return user
 }

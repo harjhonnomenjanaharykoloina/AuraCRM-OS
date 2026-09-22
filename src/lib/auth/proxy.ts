@@ -60,7 +60,7 @@ export async function getProxySession(req: Request): Promise<{
 
     if (!token) return null
 
-    const secret = process.env.JWT_SECRET || process.env.BETTER_AUTH_SECRET
+    const secret = process.env.BETTER_AUTH_SECRET ?? process.env.JWT_SECRET
 
     if (!secret) {
         console.error("[proxy] JWT_SECRET or BETTER_AUTH_SECRET is not set")

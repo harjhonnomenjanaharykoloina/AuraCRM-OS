@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import {
     Table,
@@ -10,13 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { User, Shield } from "lucide-react";
+import { User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { InviteUserDialog } from "@/components/admin/users/invite-user-dialog";
 
 export default async function UsersPage() {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
 
     const users = await db.user.findMany({
@@ -35,9 +37,9 @@ export default async function UsersPage() {
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t("admin.users.title")}</h1>
                     <p className="text-muted-foreground">
-                        Manage users and their access permissions.
+                        {t("admin.users.subtitle")}
                     </p>
                 </div>
                 <InviteUserDialog />
@@ -47,11 +49,11 @@ export default async function UsersPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Permission Sets</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead>{t("shared.common.name")}</TableHead>
+                            <TableHead>{t("shared.common.email")}</TableHead>
+                            <TableHead>{t("admin.users.role")}</TableHead>
+                            <TableHead>{t("admin.permissionSets.title")}</TableHead>
+                            <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -61,7 +63,7 @@ export default async function UsersPage() {
                                     <div className="flex items-center gap-2">
                                         <User className="h-4 w-4 text-muted-foreground" />
                                         <div className="flex flex-col">
-                                            <span>{user.name || "Unnamed User"}</span>
+                                            <span>{user.name || t("admin.users.unnamedUser")}</span>
                                             <span className="text-xs text-muted-foreground">@{user.username}</span>
                                         </div>
                                     </div>
@@ -80,14 +82,14 @@ export default async function UsersPage() {
                                             </Badge>
                                         ))}
                                         {user.permissionAssignments.length === 0 && (
-                                            <span className="text-muted-foreground text-sm italic">None</span>
+                                            <span className="text-muted-foreground text-sm italic">{t("shared.common.none")}</span>
                                         )}
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="sm" asChild>
                                         <Link href={`/admin/users/${user.id}`}>
-                                            Manage
+                                            {t("shared.buttons.manage")}
                                         </Link>
                                     </Button>
                                 </TableCell>

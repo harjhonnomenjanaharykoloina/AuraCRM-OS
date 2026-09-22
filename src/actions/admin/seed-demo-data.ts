@@ -14,7 +14,8 @@ import {
     ShareAccessLevel,
     UserType,
 } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs"
+import { BCRYPT_COST } from "@/lib/crypto";
 import { ensureUserCompanionRecord } from "@/lib/user-companion";
 
 export async function seedDemoData() {
@@ -53,7 +54,7 @@ export async function seedDemoData() {
             return { success: false, error: "Demo data already exists for this org." };
         }
 
-        const hashedPassword = await bcrypt.hash("123123", 10);
+        const hashedPassword = await bcrypt.hash("123123", BCRYPT_COST);
 
         const buildUserIdentity = (index: number) => {
             const suffix = `user${index}`;

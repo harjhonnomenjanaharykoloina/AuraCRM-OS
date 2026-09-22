@@ -1,5 +1,7 @@
 "use client";
 
+
+
 import { useEffect } from "react";
 import { AppDefinition, ObjectDefinition } from "@prisma/client";
 import { DEFAULT_WIDGET_COLOR, useBuilderStore, WidgetConfig, validateWidget } from "./builder-store";
@@ -11,6 +13,7 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { saveDashboardLayout } from "@/actions/admin/admin-actions";
+import { useTranslations } from "@/i18n/client";
 
 interface BuilderLayoutProps {
     appDef: AppDefinition;
@@ -20,6 +23,7 @@ interface BuilderLayoutProps {
 }
 
 export function BuilderLayout({ appDef, initialWidgets, availableObjects, availableQueues }: BuilderLayoutProps) {
+    const t = useTranslations();
     const { setWidgets, widgets, selectedWidgetId } = useBuilderStore();
 
     useEffect(() => {
@@ -61,18 +65,18 @@ export function BuilderLayout({ appDef, initialWidgets, availableObjects, availa
     const handleSave = async () => {
         const invalid = widgets.filter((w) => validateWidget(w).length > 0);
         if (invalid.length > 0) {
-            toast.error("Fix required fields before saving.");
+            toast.error(t("admin.builder.saveValidationError"));
             return;
         }
         try {
             const result = await saveDashboardLayout(appDef.id, widgets);
             if (result.success) {
-                toast.success("Dashboard saved successfully");
+                toast.success(t("admin.builder.saveSuccess"));
             } else {
-                toast.error(result.error || "Failed to save");
+                toast.error(result.error || t("admin.builder.saveError"));
             }
-        } catch (err) {
-            toast.error("An error occurred while saving");
+        } catch {
+            toast.error(t("admin.builder.saveExceptionError"));
         }
     };
 
@@ -87,13 +91,13 @@ export function BuilderLayout({ appDef, initialWidgets, availableObjects, availa
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="font-semibold text-lg">{appDef.name} Dashboard Builder</h1>
-                        <p className="text-xs text-muted-foreground">Drag widgets • Click to configure</p>
+                        <h1 className="font-semibold text-lg">{t("admin.builder.title", { appName: appDef.name })}</h1>
+                        <p className="text-xs text-muted-foreground">{t("admin.builder.subtitle")}</p>
                     </div>
                 </div>
                 <Button onClick={handleSave} className="gap-2 shadow-md" disabled={widgets.some((w) => validateWidget(w).length > 0)}>
                     <Save className="h-4 w-4" />
-                    Save Dashboard
+                    {t("admin.builder.saveDashboard")}
                 </Button>
             </header>
 
@@ -102,8 +106,8 @@ export function BuilderLayout({ appDef, initialWidgets, availableObjects, availa
                 {/* Left Sidebar: Toolbox */}
                 <aside className="w-72 border-r bg-white flex flex-col shrink-0 shadow-sm">
                     <div className="p-4 border-b bg-slate-50">
-                        <h2 className="font-semibold">Widget Library</h2>
-                        <p className="text-xs text-muted-foreground mt-1">Drag onto canvas</p>
+                        <h2 className="font-semibold">{t("admin.builder.widgetLibrary")}</h2>
+                        <p className="text-xs text-muted-foreground mt-1">{t("admin.builder.dragOntoCanvas")}</p>
                     </div>
                     <div className="flex-1 overflow-y-auto">
                         <WidgetToolbox />
@@ -122,9 +126,9 @@ export function BuilderLayout({ appDef, initialWidgets, availableObjects, availa
                 {/* Right Sidebar: Inspector */}
                 <aside className="w-[420px] border-l bg-white flex flex-col shrink-0 shadow-sm">
                     <div className="p-4 border-b bg-slate-50">
-                        <h2 className="font-semibold">Inspector</h2>
+                        <h2 className="font-semibold">{t("admin.builder.inspector")}</h2>
                         <p className="text-xs text-muted-foreground mt-1">
-                            {selectedWidgetId ? "Configure the selected widget" : "Select a widget to edit"}
+                            {selectedWidgetId ? t("admin.builder.configureSelected") : t("admin.builder.selectWidget")}
                         </p>
                     </div>
                     <div className="flex-1 overflow-y-auto">

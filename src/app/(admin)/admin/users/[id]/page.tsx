@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { getFieldDisplayValue } from "@/lib/field-data";
 import { applyLayoutVisibility, normalizeRecordPageLayoutConfig, type LayoutConfigV2 } from "@/lib/record-page-layout";
@@ -17,9 +18,6 @@ import { Button } from "@/components/ui/button";
 import {
     Card,
     CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
 } from "@/components/ui/card";
 import {
     Table,
@@ -33,6 +31,7 @@ import {
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
 
     const organizationId = parseInt((session.user as any).organizationId);
     const { id } = await params;
@@ -172,11 +171,11 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
             createdByName:
                 companionRecord.createdBy.name ||
                 companionRecord.createdBy.email ||
-                `User #${companionRecord.createdById}`,
+                t("shared.common.userFallback", { id: companionRecord.createdById }),
             ownerName:
                 companionRecord.owner?.name ||
                 companionRecord.owner?.email ||
-                `User #${companionRecord.ownerId}`,
+                t("shared.common.userFallback", { id: companionRecord.ownerId }),
             backingUserId: companionRecord.backingUserId,
             ...Object.fromEntries(
                 companionRecord.fields.map((fieldData) => [
@@ -255,7 +254,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                             fieldData.fieldDef.apiName,
                             {
                                 id: lookup.id,
-                                name: lookup.name || `Record #${lookup.id}`,
+                                name: lookup.name || t("shared.common.recordFallback", { id: lookup.id }),
                                 objectApiName: lookup.objectDef.apiName,
                             },
                         ];
@@ -304,9 +303,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">{user.name || `User #${user.id}`}</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{user.name || t("shared.common.userFallback", { id: user.id })}</h1>
                     <p className="text-muted-foreground">
-                        {user.email || "No email"} · @{user.username} ·{" "}
+                        {user.email || t("admin.userDetail.noEmail")} · @{user.username} ·{" "}
                         <Badge variant="outline">{user.userType}</Badge>
                     </p>
                 </div>
@@ -332,7 +331,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                         />
                     ) : (
                         <div className="rounded-lg border border-dashed border-border/70 px-4 py-6 text-sm text-muted-foreground">
-                            No companion user record was found for this user.
+                            {t("admin.userDetail.noCompanionRecord")}
                         </div>
                     )}
                 </CardContent>
@@ -340,7 +339,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Queue Memberships</h2>
+                    <h2 className="text-xl font-semibold">{t("admin.userDetail.queueMemberships")}</h2>
                     <AddUserQueueMembershipDialog
                         userId={user.id}
                         queues={availableQueues.map((queue) => ({
@@ -354,8 +353,8 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Queue</TableHead>
-                                <TableHead className="w-[120px]">Actions</TableHead>
+                                <TableHead>{t("admin.userDetail.queue")}</TableHead>
+                                <TableHead className="w-[120px]">{t("shared.common.actions")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -366,7 +365,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                                         <RemoveQueueMemberButton
                                             queueId={membership.queueId}
                                             userId={user.id}
-                                            memberName={user.name || `User #${user.id}`}
+                                            memberName={user.name || t("shared.common.userFallback", { id: user.id })}
                                             queueName={membership.queue.name}
                                         />
                                     </TableCell>
@@ -375,7 +374,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                             {user.queueMemberships.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={2} className="py-8 text-center text-muted-foreground">
-                                        This user is not in any queues.
+                                        {t("admin.userDetail.notInQueues")}
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -386,7 +385,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Assigned Permission Set Groups</h2>
+                    <h2 className="text-xl font-semibold">{t("admin.userDetail.assignedPermissionSetGroups")}</h2>
                     <AssignGroupDialog userId={user.id} availableGroups={availableGroups} />
                 </div>
 
@@ -394,9 +393,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Group Name</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead>Permission Sets</TableHead>
+                                <TableHead>{t("admin.userDetail.groupName")}</TableHead>
+                                <TableHead>{t("shared.common.description")}</TableHead>
+                                <TableHead>{t("admin.userDetail.permissionSets")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -410,14 +409,14 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                                     </TableCell>
                                     <TableCell>{group.description}</TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{group.permissionSets.length} set(s)</Badge>
+                                        <Badge variant="outline">{t("shared.common.setCount", { count: group.permissionSets.length })}</Badge>
                                     </TableCell>
                                 </TableRow>
                             ))}
                             {assignedGroups.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                                        No groups assigned. Click "Assign Group" to add one.
+                                        {t("admin.userDetail.noGroupsAssigned")}
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -428,10 +427,10 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Individual Permission Sets</h2>
+                    <h2 className="text-xl font-semibold">{t("admin.userDetail.individualPermissionSets")}</h2>
                     {availablePermissionSets.length === 0 ? (
                         <div className="text-sm italic text-muted-foreground">
-                            All permission sets are already assigned
+                            {t("admin.userDetail.allAssigned")}
                         </div>
                     ) : (
                         <AssignPermissionSetDialog
@@ -445,9 +444,9 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="w-[100px]">Actions</TableHead>
+                                <TableHead>{t("shared.common.name")}</TableHead>
+                                <TableHead>{t("shared.common.description")}</TableHead>
+                                <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -468,7 +467,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                                                     {assign.permissionSet.name}
                                                     {groupSources.length > 0 && (
                                                         <div className="mt-0.5 flex flex-wrap gap-1 text-xs text-muted-foreground">
-                                                            <span>via group:</span>
+                                                            <span>{t("admin.userDetail.viaGroup")}:</span>
                                                             {groupSources.map((source: any) => (
                                                                 <Badge
                                                                     key={source.permissionSetGroup.id}
@@ -498,7 +497,7 @@ export default async function UserDetailPage({ params }: { params: Promise<{ id:
                             {user.permissionAssignments.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                                        No permission sets assigned.
+                                        {t("admin.userDetail.noPermissionSetsAssigned")}
                                     </TableCell>
                                 </TableRow>
                             )}

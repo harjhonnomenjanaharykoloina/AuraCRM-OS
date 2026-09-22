@@ -292,6 +292,7 @@ export async function getObjectDeleteProtection(organizationId: number, objectDe
             where: {
                 organizationId,
                 objectDefId,
+                isDeleted: false,
             },
         }),
     ]);

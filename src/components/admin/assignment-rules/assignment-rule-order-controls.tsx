@@ -6,6 +6,7 @@ import { reorderAssignmentRules } from "@/actions/admin/assignment-rule-actions"
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 
 export function AssignmentRuleOrderControls({
     objectDefId,
@@ -19,6 +20,8 @@ export function AssignmentRuleOrderControls({
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
+    const t = useTranslations();
+
     const move = (direction: "up" | "down") => {
         const targetIndex = direction === "up" ? index - 1 : index + 1;
         if (targetIndex < 0 || targetIndex >= ruleIds.length) return;
@@ -29,7 +32,7 @@ export function AssignmentRuleOrderControls({
         startTransition(async () => {
             const result = await reorderAssignmentRules(objectDefId, nextOrder);
             if (result.success) {
-                toast.success("Rule order updated");
+                toast.success(t("admin.ruleCommon.orderUpdated"));
                 router.refresh();
             } else {
                 toast.error(result.error);

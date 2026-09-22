@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAvailableApps } from "@/lib/permissions";
+import { getMessages, getT } from "@/i18n/server";
 
 export default async function NoAppsPage() {
     const session = await auth();
@@ -13,6 +14,9 @@ export default async function NoAppsPage() {
 
     const user = session.user as any;
     const isAdmin = user.userType === "admin";
+
+    const messages = await getMessages();
+    const t = await getT(messages);
 
     const availableApps = await getAvailableApps(parseInt(user.id), parseInt(user.organizationId), user.userType);
     if (availableApps.length > 0) {
@@ -32,15 +36,15 @@ export default async function NoAppsPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">
-                                            Workspace Status
+                                            {t("standard.noApps.workspaceStatus")}
                                         </p>
                                         <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
-                                            {isAdmin ? "Create the first app" : "No app available yet"}
+                                            {isAdmin ? t("standard.noApps.createFirstAppAdmin") : t("standard.noApps.noAppAvailable")}
                                         </h1>
                                         <p className="max-w-xl text-sm leading-6 text-slate-600 sm:text-[15px]">
                                             {isAdmin
-                                                ? "This organization is ready, but the standard workspace cannot open until at least one app is created and available."
-                                                : "Your account is active, but there is no app currently assigned that you can open."}
+                                                ? t("standard.noApps.adminDesc")
+                                                : t("standard.noApps.userDesc")}
                                         </p>
                                     </div>
                                 </div>
@@ -54,11 +58,11 @@ export default async function NoAppsPage() {
                                         <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
                                             <Waypoints className="h-4 w-4" />
                                         </div>
-                                        <h2 className="text-sm font-semibold text-slate-950">What is missing</h2>
+                                        <h2 className="text-sm font-semibold text-slate-950">{t("standard.noApps.whatIsMissing")}</h2>
                                         <p className="mt-2 text-sm leading-6 text-slate-600">
                                             {isAdmin
-                                                ? "There is no app in this workspace yet."
-                                                : "There is no assigned app available for this user."}
+                                                ? t("standard.noApps.adminMissing")
+                                                : t("standard.noApps.userMissing")}
                                         </p>
                                     </div>
 
@@ -66,11 +70,11 @@ export default async function NoAppsPage() {
                                         <div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-white text-slate-700 shadow-sm ring-1 ring-slate-200">
                                             <Wrench className="h-4 w-4" />
                                         </div>
-                                        <h2 className="text-sm font-semibold text-slate-950">Next action</h2>
+                                        <h2 className="text-sm font-semibold text-slate-950">{t("standard.noApps.nextAction")}</h2>
                                         <p className="mt-2 text-sm leading-6 text-slate-600">
                                             {isAdmin
-                                                ? "Create an app, add the right objects, and make it available to users using permissionSets."
-                                                : "Ask an administrator to grant access to at least one app."}
+                                                ? t("standard.noApps.adminNext")
+                                                : t("standard.noApps.userNext")}
                                         </p>
                                     </div>
                                 </div>
@@ -79,12 +83,12 @@ export default async function NoAppsPage() {
                                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="space-y-1">
                                             <h2 className="text-base font-semibold text-slate-950">
-                                                {isAdmin ? "Open setup to continue" : "Come back after access is assigned"}
+                                                {isAdmin ? t("standard.noApps.openSetup") : t("standard.noApps.comeBack")}
                                             </h2>
                                             <p className="text-sm leading-6 text-slate-600">
                                                 {isAdmin
-                                                    ? "Once the first app exists, this page will stop appearing and users will be routed into the workspace."
-                                                    : "Refresh this page after access is granted and the system will route you into the workspace automatically."}
+                                                    ? t("standard.noApps.setupDesc")
+                                                    : t("standard.noApps.refreshDesc")}
                                             </p>
                                         </div>
 
@@ -97,13 +101,13 @@ export default async function NoAppsPage() {
                                                 >
                                                     <Link href="/admin">
                                                         <Sparkles className="h-4 w-4" />
-                                                        Open Admin
+                                                        {t("standard.noApps.openAdmin")}
                                                         <ArrowRight className="h-4 w-4" />
                                                     </Link>
                                                 </Button>
                                             ) : (
                                                 <Button asChild variant="outline" size="lg" className="h-11 rounded-xl px-5">
-                                                    <Link href="/login">Return to Login</Link>
+                                                    <Link href="/login">{t("standard.noApps.returnToLogin")}</Link>
                                                 </Button>
                                             )}
                                         </div>

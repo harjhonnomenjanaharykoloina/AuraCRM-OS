@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import {
     Table,
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 export default async function GroupsPage() {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
 
     const groups = await db.group.findMany({
@@ -39,16 +41,16 @@ export default async function GroupsPage() {
                                 <Users className="h-6 w-6" />
                             </span>
                             <div>
-                                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Groups</h1>
+                                <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t("admin.groups.title")}</h1>
                                 <p className="text-sm text-slate-600">
-                                    Share visibility by grouping users under the same audience.
+                                    {t("admin.groups.description")}
                                 </p>
                             </div>
                         </div>
                         <div className="flex flex-wrap gap-2">
-                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Sharing audiences</Badge>
-                            <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">One group per user</Badge>
-                            <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">User-owned sharing</Badge>
+                            <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">{t("admin.groups.badges.sharingAudiences")}</Badge>
+                            <Badge className="bg-sky-100 text-sky-800 hover:bg-sky-100">{t("admin.groups.badges.onePerUser")}</Badge>
+                            <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">{t("admin.groups.badges.userOwned")}</Badge>
                         </div>
                     </div>
                     <CreateGroupDialog />
@@ -62,9 +64,9 @@ export default async function GroupsPage() {
                             <Shield className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Sharing Rules</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.groups.features.sharingRules.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Rules grant read/edit/delete to groups.
+                                {t("admin.groups.features.sharingRules.description")}
                             </p>
                         </div>
                     </div>
@@ -75,9 +77,9 @@ export default async function GroupsPage() {
                             <Layers className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Audience Scope</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.groups.features.audienceScope.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Used for user-owned records that match criteria.
+                                {t("admin.groups.features.audienceScope.description")}
                             </p>
                         </div>
                     </div>
@@ -88,9 +90,9 @@ export default async function GroupsPage() {
                             <BadgeCheck className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Permission Aware</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.groups.features.permissionAware.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Object permissions still apply to shared access.
+                                {t("admin.groups.features.permissionAware.description")}
                             </p>
                         </div>
                     </div>
@@ -101,10 +103,10 @@ export default async function GroupsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Users</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead>{t("shared.common.name")}</TableHead>
+                            <TableHead>{t("shared.common.description")}</TableHead>
+                            <TableHead>{t("admin.groups.table.users")}</TableHead>
+                            <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -120,7 +122,7 @@ export default async function GroupsPage() {
                                 <TableCell>{group._count.users}</TableCell>
                                 <TableCell>
                                     <Button variant="ghost" size="sm" asChild>
-                                        <Link href={`/admin/groups/${group.id}`}>Manage</Link>
+                                        <Link href={`/admin/groups/${group.id}`}>{t("admin.groups.manage")}</Link>
                                     </Button>
                                 </TableCell>
                             </TableRow>
@@ -128,7 +130,7 @@ export default async function GroupsPage() {
                         {groups.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                    No groups found. Create one to get started.
+                                    {t("admin.groups.noGroupsFound")}
                                 </TableCell>
                             </TableRow>
                         )}

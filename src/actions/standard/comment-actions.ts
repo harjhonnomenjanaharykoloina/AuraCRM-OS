@@ -60,6 +60,7 @@ async function getReadableRecord(
         where: {
             id: recordId,
             organizationId,
+            isDeleted: false,
             ...(accessFilter ?? {}),
         },
         select: {
@@ -81,6 +82,7 @@ export async function createRecordComment(data: z.infer<typeof commentSchema>) {
             where: {
                 id: payload.recordId,
                 organizationId,
+                isDeleted: false,
             },
             select: {
                 id: true,
@@ -224,7 +226,7 @@ export async function updateRecordComment(data: z.infer<typeof updateCommentSche
     }
 }
 
-export async function deleteRecordComment(commentId: number) {
+export async function deleteRecordComment(_commentId: number) {
     try {
         await getUserContext();
         return { success: false, error: "Deleting comments is disabled." };

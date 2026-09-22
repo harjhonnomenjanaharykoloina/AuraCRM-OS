@@ -6,6 +6,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { reorderDuplicateRules } from "@/actions/admin/duplicate-rule-actions";
+import { useTranslations } from "@/i18n/client";
 
 export function DuplicateRuleOrderControls({
     objectDefId,
@@ -16,6 +17,7 @@ export function DuplicateRuleOrderControls({
     ruleIds: number[];
     index: number;
 }) {
+    const t = useTranslations();
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -29,7 +31,7 @@ export function DuplicateRuleOrderControls({
         startTransition(async () => {
             const result = await reorderDuplicateRules(objectDefId, nextOrder);
             if (result.success) {
-                toast.success("Rule order updated");
+                toast.success(t("admin.ruleCommon.orderUpdated"));
                 router.refresh();
             } else {
                 toast.error(result.error);

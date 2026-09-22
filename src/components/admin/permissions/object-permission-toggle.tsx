@@ -1,7 +1,6 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { updateObjectPermission } from "@/actions/admin/permission-actions";
 import { toast } from "sonner";
 import { useState } from "react";
 
@@ -52,7 +51,7 @@ export function ObjectPermissionToggle({
                 toast.error(result.error);
                 setChecked(!newChecked); // Revert
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to update permission");
             setChecked(!newChecked);
         } finally {

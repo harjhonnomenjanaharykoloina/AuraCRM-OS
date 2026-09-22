@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 
 export type PermissionAction =
     | "read"
@@ -10,6 +11,16 @@ export type PermissionAction =
     | "modifyListViews";
 
 export type SystemPermission = "dataLoading";
+
+export type ObjectPermissionFields = {
+    allowRead: boolean;
+    allowCreate: boolean;
+    allowEdit: boolean;
+    allowDelete: boolean;
+    allowViewAll: boolean;
+    allowModifyAll: boolean;
+    allowModifyListViews: boolean;
+};
 
 type ObjectAccessSummary = {
     canReadOwn: boolean;
@@ -50,6 +61,23 @@ export async function getUserPermissionSetIds(userId: number): Promise<number[]>
     });
 
     return directAssignments.map(a => a.permissionSetId);
+}
+
+export function sanitizeUserObjectPermissions<T extends ObjectPermissionFields>(
+    objectApiName: string,
+    permissions: T
+): T {
+    if (objectApiName !== USER_OBJECT_API_NAME) {
+        return permissions;
+    }
+
+    return {
+        ...permissions,
+        allowCreate: false,
+        allowEdit: false,
+        allowDelete: false,
+        allowModifyAll: false,
+    };
 }
 
 function mergeObjectAccess(target: ObjectAccessSummary, perm: {
@@ -233,7 +261,7 @@ export async function checkPermission(
     return accessAllowsAction(access, action);
 }
 
-export async function getAvailableApps(userId: number, organizationId: number, userType: string) {
+export async function getAvailableApps(userId: number, organizationId: number, _userType: string) {
     // Validate inputs
     if (!userId || isNaN(userId) || !organizationId || isNaN(organizationId)) {
         console.error("Invalid userId or organizationId in getAvailableApps", { userId, organizationId });

@@ -58,7 +58,7 @@ export function CreatePermissionGroupDialog() {
             } else {
                 toast.error(result.error);
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         }
     }

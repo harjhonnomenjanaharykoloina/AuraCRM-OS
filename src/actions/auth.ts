@@ -1,10 +1,13 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { db } from "@/lib/db"
+import { BCRYPT_COST } from "@/lib/crypto";
 import { UserType } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { createOrgTemplate } from "@/lib/seeding/create-org-template";
+import { passwordSchema } from "@/lib/password-validation";
+
 import { ensureUserCompanionRecord } from "@/lib/user-companion";
 
 import { legacySignIn } from "@/lib/auth-proxy-fix";
@@ -18,7 +21,7 @@ const registerSchema = z.object({
         .regex(/^[a-z0-9]+$/, "Username must be lowercase letters and numbers only")
         .transform((value) => value.toLowerCase()),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
+    password: passwordSchema,
 });
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -66,7 +69,7 @@ export async function register(data: z.infer<typeof registerSchema>) {
 
         // Hash password
         debugLog("Hashing password");
-        const hashedPassword = await bcrypt.hash(validated.password, 10);
+        const hashedPassword = await bcrypt.hash(validated.password, BCRYPT_COST);
 
         // Create organization slug from name
         const slug = validated.organizationName
@@ -118,10 +121,15 @@ export async function register(data: z.infer<typeof registerSchema>) {
         });
 
         debugLog("Seeding standard objects");
-        // 3. Seed standard objects (outside transaction to avoid timeout)
-        await createOrgTemplate(result.organization.id);
+        // 3. Seed standard objects + default app/roles (outside transaction to avoid timeout)
+        const template = await createOrgTemplate(result.organization.id);
         await db.$transaction(async (tx) => {
             await ensureUserCompanionRecord(tx, result.organization.id, result.user.id);
+            if (template?.ownerPermissionSet?.id) {
+                await tx.permissionSetAssignment.create({
+                    data: { userId: result.user.id, permissionSetId: template.ownerPermissionSet.id },
+                });
+            }
         });
 
         debugLog("Registration successful");
@@ -154,7 +162,7 @@ export async function register(data: z.infer<typeof registerSchema>) {
                     } else {
                         errorMessages = error.message;
                     }
-                } catch (e) {
+                } catch {
                     errorMessages = error.message;
                 }
             }
@@ -204,10 +212,10 @@ export async function register(data: z.infer<typeof registerSchema>) {
             };
         }
 
-        // Return the actual error message for debugging
+        console.error("Unexpected registration error:", error);
         return {
             success: false,
-            error: error?.message || "An error occurred during registration. Please try again.",
+            error: "An unexpected error occurred. Please try again.",
         };
     }
 }

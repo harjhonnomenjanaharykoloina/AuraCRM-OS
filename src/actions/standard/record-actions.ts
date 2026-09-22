@@ -1,6 +1,7 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getUserContext } from "@/lib/auth/context";
+export { getUserContext };
 import { db } from "@/lib/db";
 import { validateRecordData } from "@/lib/validation/record-validation";
 import { normalizeUniqueValue, normalizeStoredUniqueValue } from "@/lib/unique";
@@ -56,30 +57,6 @@ import {
     getTemporalComparableValue,
     parseDateTimeValue,
 } from "@/lib/temporal";
-
-// Helper to get current user and their organization
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-
-    if (!user.id || !user.organizationId) {
-        console.error("User context missing required fields:", user);
-        throw new Error("Invalid session: Missing user ID or Organization ID. Please sign out and sign in again.");
-    }
-
-    const userId = parseInt(user.id);
-    const organizationId = parseInt(user.organizationId);
-
-    if (isNaN(userId) || isNaN(organizationId)) {
-        console.error("User context has invalid IDs:", user);
-        throw new Error("Invalid session: IDs are not numbers. Please sign out and sign in again.");
-    }
-
-    return { userId, organizationId, userType: user.userType };
-}
 
 const BUILT_IN_SORT_FIELDS = new Set(["createdAt", "updatedAt", "name"]);
 type ListViewOwnerScope = "any" | "mine" | "queue";
@@ -355,6 +332,7 @@ async function validateLookupValues(
             where: {
                 organizationId,
                 objectDefId: targetId,
+                isDeleted: false,
                 id: { in: Array.from(ids) },
             },
             select: { id: true },
@@ -1096,8 +1074,10 @@ export async function getRecords(
     pageSize: number = 25,
     sortField?: string,
     sortDirection: "asc" | "desc" = "desc",
-    listViewId?: number
+    listViewId?: number,
+    opts?: { all?: boolean; includeDeleted?: boolean }
 ) {
+    const all = opts?.all === true;
     const { userId, organizationId } = await getUserContext();
     const queueIds = await getUserQueueIds(userId);
     const userGroupId = (await db.user.findUnique({
@@ -1118,6 +1098,8 @@ export async function getRecords(
         const canRead = await checkPermission(userId, organizationId, objectApiName, "read");
         if (!canRead) throw new Error("Insufficient permissions");
     }
+
+    const includeDeleted = opts?.includeDeleted === true && canViewAll;
 
     // 1. Get Object Definition
     const objectDef = await db.objectDefinition.findUnique({
@@ -1179,6 +1161,7 @@ export async function getRecords(
     let where: Prisma.RecordWhereInput = {
         organizationId,
         objectDefId: objectDef.id,
+        ...(includeDeleted ? {} : { isDeleted: false }),
         ...(accessFilter ?? {}),
     };
     where = applyListViewOwnerScopeFilter(where, listViewOwnerScope, listViewOwnerQueueId, userId);
@@ -1244,21 +1227,40 @@ export async function getRecords(
             const directionSql = effectiveSortDirection === "asc" ? Prisma.sql`ASC` : Prisma.sql`DESC`;
             const orderExpression = buildFieldSortExpression(resolvedSortFieldDef.type);
 
-            const orderedRows = await db.$queryRaw<{ id: number }[]>(Prisma.sql`
-                SELECT r."id"
-                FROM "Record" r
-                LEFT JOIN "FieldData" fd
-                    ON fd."recordId" = r."id"
-                    AND fd."fieldDefId" = ${resolvedSortFieldDef.id}
-                WHERE r."organizationId" = ${organizationId}
-                  AND r."objectDefId" = ${objectDef.id}
-                  ${accessFilterSql}
-                  ${listViewOwnerScopeSql}
-                  ${listViewFilterSql}
-                ORDER BY ${orderExpression} ${directionSql}, r."createdAt" ${directionSql}
-                LIMIT ${currentPageSize}
-                OFFSET ${skip}
-            `);
+            let orderedRows: { id: number }[];
+            if (all) {
+                orderedRows = await db.$queryRaw<{ id: number }[]>(Prisma.sql`
+                    SELECT r."id"
+                    FROM "Record" r
+                    LEFT JOIN "FieldData" fd
+                        ON fd."recordId" = r."id"
+                        AND fd."fieldDefId" = ${resolvedSortFieldDef.id}
+                    WHERE r."organizationId" = ${organizationId}
+                      AND r."objectDefId" = ${objectDef.id}
+                      AND r."isDeleted" = ${includeDeleted ? Prisma.sql`` : Prisma.sql`false`}
+                      ${accessFilterSql}
+                      ${listViewOwnerScopeSql}
+                      ${listViewFilterSql}
+                    ORDER BY ${orderExpression} ${directionSql}, r."createdAt" ${directionSql}
+                `);
+            } else {
+                orderedRows = await db.$queryRaw<{ id: number }[]>(Prisma.sql`
+                    SELECT r."id"
+                    FROM "Record" r
+                    LEFT JOIN "FieldData" fd
+                        ON fd."recordId" = r."id"
+                        AND fd."fieldDefId" = ${resolvedSortFieldDef.id}
+                    WHERE r."organizationId" = ${organizationId}
+                      AND r."objectDefId" = ${objectDef.id}
+                      AND r."isDeleted" = ${includeDeleted ? Prisma.sql`` : Prisma.sql`false`}
+                      ${accessFilterSql}
+                      ${listViewOwnerScopeSql}
+                      ${listViewFilterSql}
+                    ORDER BY ${orderExpression} ${directionSql}, r."createdAt" ${directionSql}
+                    LIMIT ${currentPageSize}
+                    OFFSET ${skip}
+                `);
+            }
 
             const orderedIds = orderedRows.map((row) => row.id);
             if (orderedIds.length > 0) {
@@ -1336,13 +1338,17 @@ export async function getRecords(
                     ? { updatedAt: effectiveSortDirection }
                     : { createdAt: effectiveSortDirection };
 
-        records = await db.record.findMany({
-            where,
-            include,
-            skip,
-            take: currentPageSize,
-            orderBy,
-        });
+        if (all) {
+            records = await db.record.findMany({ where, include, orderBy });
+        } else {
+            records = await db.record.findMany({
+                where,
+                include,
+                skip,
+                take: currentPageSize,
+                orderBy,
+            });
+        }
     }
 
     // 3. Transform Data
@@ -1404,6 +1410,7 @@ export async function getRecords(
                 id: { in: uniqueTargetIds },
                 organizationId,
                 objectDefId: targetObjectDef.id,
+                isDeleted: false,
             },
             include: {
                 fields: {
@@ -1459,7 +1466,7 @@ export async function getRecords(
     };
 }
 
-export async function getRecord(objectApiName: string, recordId: number) {
+export async function getRecord(objectApiName: string, recordId: number, opts?: { includeDeleted?: boolean }) {
     const { userId, organizationId } = await getUserContext();
     const queueIds = await getUserQueueIds(userId);
     const userGroupId = (await db.user.findUnique({
@@ -1477,10 +1484,12 @@ export async function getRecord(objectApiName: string, recordId: number) {
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);
 
+    const includeDeleted = opts?.includeDeleted === true && canViewAll;
     const record = await db.record.findFirst({
         where: {
             id: recordId,
             organizationId, // Ensure tenant isolation
+            ...(includeDeleted ? {} : { isDeleted: false }),
             ...(accessFilter ?? {}),
         },
         include: {
@@ -1533,7 +1542,7 @@ export async function getRecord(objectApiName: string, recordId: number) {
     if (!record) {
         if (!canViewAll) {
             const existing = await db.record.findUnique({
-                where: { id: recordId, organizationId },
+                where: { id: recordId, organizationId, isDeleted: false },
             });
             if (existing) {
                 return { success: false, error: "ACCESS_DENIED" };
@@ -1569,6 +1578,7 @@ export async function getRecord(objectApiName: string, recordId: number) {
                         where: {
                             id: targetRecordId,
                             organizationId,
+                            isDeleted: false,
                             objectDefId: targetObjectDef.id,
                         },
                         include: {
@@ -1623,6 +1633,7 @@ export async function getRecord(objectApiName: string, recordId: number) {
         const childRecords = await db.record.findMany({
             where: {
                 objectDefId: childField.objectDefId,
+                isDeleted: false,
                 fields: {
                     some: {
                         fieldDefId: childField.id,
@@ -1799,6 +1810,7 @@ export async function getRecord(objectApiName: string, recordId: number) {
         const lookupRecords = await db.record.findMany({
             where: {
                 organizationId,
+                isDeleted: false,
                 ...(lookupTargetIds.size > 0
                     ? { objectDefId: { in: Array.from(lookupTargetIds) } }
                     : {}),
@@ -2279,6 +2291,7 @@ export async function updateRecord(objectApiName: string, recordId: number, data
         where: {
             id: recordId,
             organizationId,
+            isDeleted: false,
             ...(accessFilter ?? {}),
         },
         include: {
@@ -2331,6 +2344,7 @@ export async function updateRecord(objectApiName: string, recordId: number, data
             where: {
                 id: recordId,
                 organizationId,
+                isDeleted: false,
                 ...(readFilter ?? {}),
             },
             select: { id: true },
@@ -2663,6 +2677,7 @@ export async function updateOwnUserRecord(recordId: number, data: Record<string,
         where: {
             id: recordId,
             organizationId,
+            isDeleted: false,
             backingUserId: userId,
             objectDef: {
                 apiName: USER_OBJECT_API_NAME,
@@ -2844,6 +2859,7 @@ export async function claimRecord(objectApiName: string, recordId: number) {
         where: {
             id: recordId,
             organizationId,
+            isDeleted: false,
         },
         include: {
             objectDef: {
@@ -2968,6 +2984,115 @@ export async function deleteRecord(appApiName: string, objectApiName: string, re
             where: {
                 id: recordId,
                 organizationId,
+                isDeleted: false,
+                ...(accessFilter ?? {}),
+            },
+            include: { objectDef: true },
+        });
+
+        if (!record) {
+            return { success: false, error: "Record not found" };
+        }
+
+        // Soft delete: mark the record as deleted so it can be restored.
+        // Inbound lookups and file attachments are intentionally preserved so
+        // the record can be fully restored from the trash view.
+        await db.$transaction(async (tx: Prisma.TransactionClient) => {
+            await tx.record.update({
+                where: { id: recordId, organizationId },
+                data: {
+                    isDeleted: true,
+                    lastModifiedById: userId,
+                    updatedAt: new Date(),
+                },
+            });
+        });
+
+        revalidatePath(`/app/${appApiName}/${objectApiName}`);
+        revalidatePath(`/app/${appApiName}/${objectApiName}/${recordId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Delete Record Error:", error);
+        return { success: false, error: "Failed to delete record" };
+    }
+}
+
+export async function restoreRecord(appApiName: string, objectApiName: string, recordId: number) {
+    const { userId, organizationId } = await getUserContext();
+    const queueIds = await getUserQueueIds(userId);
+    const userGroupId = (await db.user.findUnique({
+        where: { id: userId },
+        select: { groupId: true },
+    }))?.groupId ?? null;
+
+    // Permission Check: restore requires modifyAll or delete permission
+    const canModifyAll = await checkPermission(userId, organizationId, objectApiName, "modifyAll");
+
+    if (!canModifyAll) {
+        const canDelete = await checkPermission(userId, organizationId, objectApiName, "delete");
+        if (!canDelete) return { success: false, error: "Insufficient permissions" };
+    }
+
+    const accessFilter = canModifyAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId, "delete");
+
+    try {
+        const record = await db.record.findFirst({
+            where: {
+                id: recordId,
+                organizationId,
+                isDeleted: true,
+                ...(accessFilter ?? {}),
+            },
+            select: { id: true },
+        });
+
+        if (!record) {
+            return { success: false, error: "Record not found" };
+        }
+
+        await db.$transaction(async (tx: Prisma.TransactionClient) => {
+            await tx.record.update({
+                where: { id: recordId, organizationId },
+                data: {
+                    isDeleted: false,
+                    lastModifiedById: userId,
+                    updatedAt: new Date(),
+                },
+            });
+        });
+
+        revalidatePath(`/app/${appApiName}/${objectApiName}`);
+        revalidatePath(`/app/${appApiName}/${objectApiName}/${recordId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Restore Record Error:", error);
+        return { success: false, error: "Failed to restore record" };
+    }
+}
+
+export async function purgeRecord(appApiName: string, objectApiName: string, recordId: number) {
+    const { userId, organizationId } = await getUserContext();
+    const queueIds = await getUserQueueIds(userId);
+    const userGroupId = (await db.user.findUnique({
+        where: { id: userId },
+        select: { groupId: true },
+    }))?.groupId ?? null;
+
+    // Permission Check: purge requires modifyAll or delete permission
+    const canModifyAll = await checkPermission(userId, organizationId, objectApiName, "modifyAll");
+
+    if (!canModifyAll) {
+        const canDelete = await checkPermission(userId, organizationId, objectApiName, "delete");
+        if (!canDelete) return { success: false, error: "Insufficient permissions" };
+    }
+
+    try {
+        const accessFilter = canModifyAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId, "delete");
+        const record = await db.record.findFirst({
+            where: {
+                id: recordId,
+                organizationId,
+                isDeleted: true,
                 ...(accessFilter ?? {}),
             },
             include: { objectDef: true },
@@ -3032,7 +3157,102 @@ export async function deleteRecord(appApiName: string, objectApiName: string, re
         }
         return { success: true };
     } catch (error) {
-        console.error("Delete Record Error:", error);
-        return { success: false, error: "Failed to delete record" };
+        console.error("Purge Record Error:", error);
+        return { success: false, error: "Failed to purge record" };
+    }
+}
+
+export async function moveRecord(
+    objectApiName: string,
+    recordId: number,
+    fieldDefId: number,
+    toPicklistOptionId: number
+) {
+    const { userId, organizationId } = await getUserContext();
+
+    const canEdit = await checkPermission(userId, organizationId, objectApiName, "edit");
+    if (!canEdit) {
+        return { success: false, error: "Insufficient permissions" };
+    }
+
+    const queueIds = await getUserQueueIds(userId);
+    const userGroupId =
+        (await db.user.findUnique({
+            where: { id: userId },
+            select: { groupId: true },
+        }))?.groupId ?? null;
+
+    const objectDef = await db.objectDefinition.findUnique({
+        where: {
+            organizationId_apiName: { organizationId, apiName: objectApiName },
+        },
+        include: {
+            fields: {
+                include: {
+                    picklistOptions: { orderBy: { sortOrder: "asc" } },
+                },
+            },
+        },
+    });
+
+    if (!objectDef) {
+        return { success: false, error: "Object not found" };
+    }
+
+    const field = objectDef.fields.find((f: any) => f.id === fieldDefId);
+    if (!field) {
+        return { success: false, error: "Field not found" };
+    }
+    if (field.type !== "Picklist") {
+        return { success: false, error: "Field is not a picklist" };
+    }
+
+    const option = field.picklistOptions?.find((o: any) => o.id === toPicklistOptionId);
+    if (!option) {
+        return { success: false, error: "Invalid picklist option" };
+    }
+
+    const canViewAll = await checkPermission(userId, organizationId, objectApiName, "viewAll");
+    const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);
+
+    const record = await db.record.findFirst({
+        where: {
+            id: recordId,
+            organizationId,
+            isDeleted: false,
+            objectDefId: objectDef.id,
+            ...(accessFilter ?? {}),
+        },
+        select: { id: true },
+    });
+
+    if (!record) {
+        return { success: false, error: "Record not found" };
+    }
+
+    try {
+        const payload = buildFieldDataPayload(field, toPicklistOptionId);
+        await db.$transaction(async (tx: Prisma.TransactionClient) => {
+            await tx.record.update({
+                where: { id: record.id },
+                data: { lastModifiedById: userId },
+            });
+            await tx.fieldData.upsert({
+                where: {
+                    recordId_fieldDefId: { recordId: record.id, fieldDefId: field.id },
+                },
+                create: {
+                    recordId: record.id,
+                    fieldDefId: field.id,
+                    ...payload,
+                },
+                update: payload,
+            });
+        });
+        revalidatePath("/app");
+        return { success: true };
+    } catch (error) {
+        console.error("moveRecord error", error);
+        return { success: false, error: "Failed to move record" };
     }
 }

@@ -64,11 +64,11 @@ export function ChartWidget({ title, config }: ChartWidgetProps) {
         }
         fetchData();
     }, [
+        config,
         config.objectDefId,
         config.groupByFieldDefId,
         config.aggregation,
         config.valueFieldDefId,
-        JSON.stringify(config.filters),
         config.filterLogic,
         config.filterExpression,
         config.ownerScope,

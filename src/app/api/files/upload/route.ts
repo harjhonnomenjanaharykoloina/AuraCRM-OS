@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
+import { checkRateLimit, tooManyRequestsResponse, uploadRateLimiter } from "@/lib/api-rate-limit";
 import {
     buildAttachmentStoragePath,
     deleteFileSafe,
@@ -96,6 +97,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Invalid session" }, { status: 400 });
         }
 
+        const { allowed, resetAt } = await checkRateLimit(uploadRateLimiter, String(userId));
+        if (!allowed) {
+            return tooManyRequestsResponse(resetAt);
+        }
+
         const formData = await request.formData();
         const recordId = Number(formData.get("recordId"));
         const fieldDefId = Number(formData.get("fieldDefId"));
@@ -118,7 +124,7 @@ export async function POST(request: Request) {
         }
 
         const record = await db.record.findFirst({
-            where: { id: recordId, organizationId },
+            where: { id: recordId, organizationId, isDeleted: false },
             include: {
                 objectDef: { select: { id: true, apiName: true } },
                 backingUser: { select: { id: true } },
@@ -148,7 +154,7 @@ export async function POST(request: Request) {
             }))?.groupId ?? null;
             const accessFilter = buildRecordAccessFilter(userId, queueIds, userGroupId, "edit");
             const accessible = await db.record.findFirst({
-                where: { id: recordId, organizationId, ...accessFilter },
+                where: { id: recordId, organizationId, isDeleted: false, ...accessFilter },
                 select: { id: true },
             });
             if (!accessible) {

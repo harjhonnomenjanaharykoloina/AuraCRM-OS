@@ -38,7 +38,7 @@ export function RemovePermissionSetFromGroupButton({ groupId, permissionSetId }:
             } else {
                 toast.error(result.error);
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         } finally {
             setIsLoading(false);

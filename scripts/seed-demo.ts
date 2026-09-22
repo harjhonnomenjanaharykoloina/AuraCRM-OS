@@ -339,7 +339,7 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
         });
         const opportunityStageField = await tx.fieldDefinition.findFirst({ where: { objectDefId: opportunityObj.id, apiName: "stage" }, select: { id: true } });
         if (opportunityStageField) {
-            await tx.picklistOption.createMany({ data: ["Prospecting", "Negotiation", "Closed Won", "Closed Lost"].map((label, index) => ({ organizationId, fieldDefId: opportunityStageField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
+            await tx.picklistOption.createMany({ data: ["Lead", "Qualified", "Demo", "Proposal", "Negotiation", "Won", "Lost"].map((label, index) => ({ organizationId, fieldDefId: opportunityStageField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
         }
         await createDefaultListView(opportunityObj.id, opportunityObj.pluralLabel, ["name", "stage", "amount"]);
 
@@ -366,6 +366,50 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
             await tx.picklistOption.createMany({ data: ["Low", "Medium", "High"].map((label, index) => ({ organizationId, fieldDefId: casePriorityField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
         }
         await createDefaultListView(caseObj.id, caseObj.pluralLabel, ["name", "subject", "status", "priority"]);
+
+        // Lead object
+        const leadObj = await tx.objectDefinition.create({
+            data: { organizationId, apiName: "lead", label: "Lead", pluralLabel: "Leads", icon: "UserPlus", isSystem: true, description: "Represents a potential customer." },
+        });
+        await tx.fieldDefinition.createMany({
+            data: [
+                { objectDefId: leadObj.id, apiName: "name", label: "Lead Name", type: "Text", required: true },
+                { objectDefId: leadObj.id, apiName: "first_name", label: "First Name", type: "Text", required: true },
+                { objectDefId: leadObj.id, apiName: "last_name", label: "Last Name", type: "Text", required: true },
+                { objectDefId: leadObj.id, apiName: "email", label: "Email", type: "Email" },
+                { objectDefId: leadObj.id, apiName: "phone", label: "Phone", type: "Phone" },
+                { objectDefId: leadObj.id, apiName: "title", label: "Title", type: "Text" },
+                { objectDefId: leadObj.id, apiName: "company_name", label: "Company Name", type: "Text" },
+                { objectDefId: leadObj.id, apiName: "company", label: "Company", type: "Lookup", lookupTargetId: companyObj.id },
+                { objectDefId: leadObj.id, apiName: "contact", label: "Contact", type: "Lookup", lookupTargetId: contactObj.id },
+                { objectDefId: leadObj.id, apiName: "status", label: "Status", type: "Picklist", required: true },
+                { objectDefId: leadObj.id, apiName: "is_converted", label: "Is Converted", type: "Checkbox" },
+            ],
+        });
+        const leadStatusField = await tx.fieldDefinition.findFirst({ where: { objectDefId: leadObj.id, apiName: "status" }, select: { id: true } });
+        if (leadStatusField) {
+            await tx.picklistOption.createMany({ data: ["New", "Working", "Converted", "Rejected"].map((label, index) => ({ organizationId, fieldDefId: leadStatusField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
+        }
+        await createDefaultListView(leadObj.id, leadObj.pluralLabel, ["name", "status", "email", "phone"]);
+
+        // Task object
+        const taskObj = await tx.objectDefinition.create({
+            data: { organizationId, apiName: "task", label: "Task", pluralLabel: "Tasks", icon: "CheckSquare", isSystem: true, description: "Represents a task or to-do item." },
+        });
+        await tx.fieldDefinition.createMany({
+            data: [
+                { objectDefId: taskObj.id, apiName: "name", label: "Task Name", type: "Text", required: true },
+                { objectDefId: taskObj.id, apiName: "description", label: "Description", type: "TextArea" },
+                { objectDefId: taskObj.id, apiName: "status", label: "Status", type: "Picklist", required: true },
+                { objectDefId: taskObj.id, apiName: "lead", label: "Lead", type: "Lookup", lookupTargetId: leadObj.id },
+                { objectDefId: taskObj.id, apiName: "contact", label: "Contact", type: "Lookup", lookupTargetId: contactObj.id },
+            ],
+        });
+        const taskStatusField = await tx.fieldDefinition.findFirst({ where: { objectDefId: taskObj.id, apiName: "status" }, select: { id: true } });
+        if (taskStatusField) {
+            await tx.picklistOption.createMany({ data: ["Not Started", "In Progress", "Completed", "Deferred"].map((label, index) => ({ organizationId, fieldDefId: taskStatusField.id, apiName: label.toLowerCase(), label, sortOrder: index, isActive: true })) });
+        }
+        await createDefaultListView(taskObj.id, taskObj.pluralLabel, ["name", "status"]);
 
         // Queue + Group default (from createOrgTemplate)
         await tx.queue.create({ data: { organizationId, name: "Unassigned", description: "Default queue for new records." } });
@@ -442,16 +486,6 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
         });
 
         // Record Page Assignments for Jira
-        const createRecordPageLayout = async (objectDefId: number, name: string, highlightFields: string[]) => {
-            const fields = await tx.fieldDefinition.findMany({ where: { objectDefId }, select: { id: true, apiName: true, required: true } });
-            const fieldByApi = new Map(fields.map((f) => [f.apiName, f.id]));
-            const highlightIds = highlightFields.map((a) => fieldByApi.get(a)).filter((id): id is number => Boolean(id));
-            const config = { columns: fields.length, highlights: { columns: 4, fields: highlightIds.slice(0, 4) } };
-            const layout = await tx.recordPageLayout.create({ data: { organizationId, objectDefId, name: `${name} Layout`, isDefault: true, config } });
-            await tx.recordPageAssignment.create({ data: { organizationId, objectDefId, appId: (name === "Project" ? jiraApp.id : jiraApp.id), layoutId: layout.id } });
-            return layout;
-        };
-
         // Simplified - just create basic page layouts for all objects
         for (const obj of [projectObj, epicObj, issueObj, providerObj, patientObj, appointmentObj]) {
             const fields = await tx.fieldDefinition.findMany({ where: { objectDefId: obj.id }, select: { id: true } });

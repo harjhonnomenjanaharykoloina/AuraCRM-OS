@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getT } from "@/i18n/server";
 import Link from "next/link";
 import {
     Table,
@@ -16,6 +17,7 @@ import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 export default async function AssignmentRulesPage() {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
 
     const objects = await db.objectDefinition.findMany({
@@ -43,16 +45,16 @@ export default async function AssignmentRulesPage() {
                             <ClipboardList className="h-6 w-6" />
                         </span>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Assignment Rules</h1>
+                            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t("admin.assignmentRules.title")}</h1>
                             <p className="text-sm text-slate-600">
-                                Route new records to users or queues the moment they’re created.
+                                {t("admin.assignmentRules.listDescription")}
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">Create-time only</Badge>
-                        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">First match wins</Badge>
-                        <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">Priority order</Badge>
+                        <Badge className="bg-indigo-100 text-indigo-800 hover:bg-indigo-100">{t("admin.assignmentRules.badges.createTimeOnly")}</Badge>
+                        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">{t("admin.assignmentRules.badges.firstMatchWins")}</Badge>
+                        <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">{t("admin.assignmentRules.badges.priorityOrder")}</Badge>
                     </div>
                 </div>
             </div>
@@ -64,9 +66,9 @@ export default async function AssignmentRulesPage() {
                             <Workflow className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Routing Logic</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.assignmentRules.features.routingLogic.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Use criteria to auto-assign new records.
+                                {t("admin.assignmentRules.features.routingLogic.description")}
                             </p>
                         </div>
                     </div>
@@ -77,9 +79,9 @@ export default async function AssignmentRulesPage() {
                             <Shuffle className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Priority Order</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.assignmentRules.features.priorityOrder.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Drag the order to decide which rule runs first.
+                                {t("admin.assignmentRules.features.priorityOrder.description")}
                             </p>
                         </div>
                     </div>
@@ -90,9 +92,9 @@ export default async function AssignmentRulesPage() {
                             <UserRound className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Targeted Ownership</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.assignmentRules.features.targetedOwnership.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Send records to a user or a queue instantly.
+                                {t("admin.assignmentRules.features.targetedOwnership.description")}
                             </p>
                         </div>
                     </div>
@@ -103,9 +105,9 @@ export default async function AssignmentRulesPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Object</TableHead>
-                            <TableHead>Rules</TableHead>
-                            <TableHead className="w-[140px]">Actions</TableHead>
+                            <TableHead>{t("admin.assignmentRules.table.object")}</TableHead>
+                            <TableHead>{t("admin.assignmentRules.table.rules")}</TableHead>
+                            <TableHead className="w-[140px]">{t("admin.assignmentRules.table.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -118,7 +120,7 @@ export default async function AssignmentRulesPage() {
                                         href={`/admin/assignment-rules/${object.id}`}
                                         className="text-sm text-primary hover:underline"
                                     >
-                                        Manage
+                                        {t("admin.assignmentRules.table.manage")}
                                     </Link>
                                 </TableCell>
                             </TableRow>
@@ -126,7 +128,7 @@ export default async function AssignmentRulesPage() {
                         {objects.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                    No objects found. Create an object first.
+                                    {t("admin.assignmentRules.table.noObjects")}
                                 </TableCell>
                             </TableRow>
                         )}

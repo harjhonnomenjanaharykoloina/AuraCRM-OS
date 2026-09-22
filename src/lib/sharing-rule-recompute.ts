@@ -202,6 +202,7 @@ export async function recomputeSharingRulesForObject({
             where: {
                 organizationId,
                 objectDefId,
+                isDeleted: false,
                 ownerType: OwnerType.USER,
                 id: { gt: lastId },
             },

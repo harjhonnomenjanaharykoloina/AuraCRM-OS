@@ -40,11 +40,6 @@ export default function RegisterPage() {
         return parsed;
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        setError(null); // Clear error on input change
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         await submitRegister();
@@ -97,7 +92,6 @@ export default function RegisterPage() {
                     void submitRegister();
                 }}
                 ctaHref="/login"
-                ctaLabel="Sign in"
             />
         </form>
     );

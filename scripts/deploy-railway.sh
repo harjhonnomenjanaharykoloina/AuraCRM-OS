@@ -39,7 +39,8 @@ NEEDS_USER_ACTION=false
 ACTION_ITEMS=()
 
 # Project root and app service name
-PROJECT_ROOT="/home/cathenon/Desktop/openCRM"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 APP_SERVICE_NAME="auracrm"
 cd "$PROJECT_ROOT"
 

@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getT } from "@/i18n/server";
 import Link from "next/link";
 import {
     Table,
@@ -15,6 +16,7 @@ import { Eye, Layers, ShieldCheck, Share2 } from "lucide-react";
 export default async function SharingRulesPage() {
     const session = await auth();
     if (!session?.user) return null;
+    const t = await getT();
     const organizationId = Number(session.user.organizationId ?? NaN);
 
     const objects = await db.objectDefinition.findMany({
@@ -39,16 +41,16 @@ export default async function SharingRulesPage() {
                             <Share2 className="h-6 w-6" />
                         </span>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Sharing Rules</h1>
+                            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t("admin.sharingRules.title")}</h1>
                             <p className="text-sm text-slate-600">
-                                Share user-owned records with groups using criteria-based access.
+                                {t("admin.sharingRules.listDescription")}
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">User-owned only</Badge>
-                        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">Access levels</Badge>
-                        <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">Object-specific</Badge>
+                        <Badge className="bg-rose-100 text-rose-800 hover:bg-rose-100">{t("admin.sharingRules.badges.userOwnedOnly")}</Badge>
+                        <Badge className="bg-amber-100 text-amber-900 hover:bg-amber-100">{t("admin.sharingRules.badges.accessLevels")}</Badge>
+                        <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">{t("admin.sharingRules.badges.objectSpecific")}</Badge>
                     </div>
                 </div>
             </div>
@@ -60,9 +62,9 @@ export default async function SharingRulesPage() {
                             <Eye className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Visibility Control</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.sharingRules.features.visibilityControl.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Grant read or edit access by criteria.
+                                {t("admin.sharingRules.features.visibilityControl.description")}
                             </p>
                         </div>
                     </div>
@@ -73,9 +75,9 @@ export default async function SharingRulesPage() {
                             <ShieldCheck className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Permission Aware</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.sharingRules.features.permissionAware.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Access still respects object permissions.
+                                {t("admin.sharingRules.features.permissionAware.description")}
                             </p>
                         </div>
                     </div>
@@ -86,9 +88,9 @@ export default async function SharingRulesPage() {
                             <Layers className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Group Audience</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.sharingRules.features.groupAudience.title")}</p>
                             <p className="text-xs text-slate-600">
-                                Shares are targeted to your defined groups.
+                                {t("admin.sharingRules.features.groupAudience.description")}
                             </p>
                         </div>
                     </div>
@@ -99,9 +101,9 @@ export default async function SharingRulesPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Object</TableHead>
-                            <TableHead>Rules</TableHead>
-                            <TableHead className="w-[140px]">Actions</TableHead>
+                            <TableHead>{t("admin.sharingRules.table.object")}</TableHead>
+                            <TableHead>{t("admin.sharingRules.table.rules")}</TableHead>
+                            <TableHead className="w-[140px]">{t("admin.sharingRules.table.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -114,7 +116,7 @@ export default async function SharingRulesPage() {
                                         href={`/admin/sharing-rules/${object.id}`}
                                         className="text-sm text-primary hover:underline"
                                     >
-                                        Manage
+                                        {t("admin.sharingRules.table.manage")}
                                     </Link>
                                 </TableCell>
                             </TableRow>
@@ -122,7 +124,7 @@ export default async function SharingRulesPage() {
                         {objects.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                    No objects found. Create an object first.
+                                    {t("admin.sharingRules.table.noObjects")}
                                 </TableCell>
                             </TableRow>
                         )}

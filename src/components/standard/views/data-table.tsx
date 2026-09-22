@@ -15,13 +15,16 @@ import {
     ArrowDown,
     ArrowUp,
     ArrowUpDown,
+    Download,
     Pin,
     Plus,
     Settings,
     Star,
     Trash2,
     Filter,
+    Undo2,
 } from "lucide-react";
+import { restoreRecord, purgeRecord } from "@/actions/standard/record-actions";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
@@ -80,6 +83,9 @@ interface DataTableProps {
     permissionSets?: Array<{ id: number; name: string }>;
     queues?: Array<{ id: number; name: string }>;
     isAdmin?: boolean;
+    isTrash?: boolean;
+    canRestore?: boolean;
+    canPurge?: boolean;
     pagination: {
         page: number;
         pageSize: number;
@@ -107,7 +113,10 @@ export function DataTable({
     groups = [],
     permissionSets = [],
     queues = [],
-    isAdmin = false,
+    isAdmin: _isAdmin = false,
+    isTrash = false,
+    canRestore = false,
+    canPurge = false,
     pagination,
 }: DataTableProps) {
     const router = useRouter();
@@ -249,10 +258,37 @@ export function DataTable({
         router.push(`${pathname}?${query}`);
     };
 
+    const handleTrashToggle = () => {
+        const query = isTrash
+            ? updateQuery({ trash: null, page: "1" })
+            : updateQuery({ trash: "1", page: "1" });
+        router.push(`${pathname}?${query}`);
+    };
+
     const handlePageChange = (page: number) => {
         const nextPage = Math.max(1, Math.min(page, pagination.totalPages));
         const query = updateQuery({ page: nextPage.toString() });
         router.push(`${pathname}?${query}`);
+    };
+
+    const handleRestore = async (recordId: number) => {
+        const result = await restoreRecord(appApiName, objectDef.apiName, recordId);
+        if (!result.success) {
+            toast.error(result.error || "Failed to restore record.");
+            return;
+        }
+        toast.success("Record restored.");
+        router.refresh();
+    };
+
+    const handlePurge = async (recordId: number) => {
+        const result = await purgeRecord(appApiName, objectDef.apiName, recordId);
+        if (!result.success) {
+            toast.error(result.error || "Failed to purge record.");
+            return;
+        }
+        toast.success("Record permanently deleted.");
+        router.refresh();
     };
 
     const renderSortIcon = (fieldApiName: string) => {
@@ -293,12 +329,22 @@ export function DataTable({
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            {canCreate && (
+                            {canCreate && !isTrash && (
                                 <Button asChild className="shadow-sm">
                                     <Link href={`/app/${appApiName}/${objectDef.apiName}/new`}>
                                         <Plus className="mr-2 h-4 w-4" />
                                         New {objectDef.label}
                                     </Link>
+                                </Button>
+                            )}
+                            {canPurge && (
+                                <Button
+                                    variant={isTrash ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={handleTrashToggle}
+                                >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    {isTrash ? "Trash" : "View trash"}
                                 </Button>
                             )}
                             {canRunImport && (
@@ -308,6 +354,16 @@ export function DataTable({
                                     </Link>
                                 </Button>
                             )}
+                            <Button
+                                variant="outline"
+                                type="button"
+                                onClick={() => {
+                                    window.location.href = `/app/${appApiName}/${objectDef.apiName}/export?viewId=${encodeURIComponent(localActiveListViewId ?? "")}`;
+                                }}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Export CSV
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -443,7 +499,7 @@ export function DataTable({
                                     <TableHead key={field.id} className="h-11">
                                         <button
                                             type="button"
-                                            className="flex w-full items-center gap-1 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                                            className="flex w-full cursor-pointer items-center gap-1 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
                                             onClick={() => handleSort(field.apiName)}
                                         >
                                             <span>{field.label}</span>
@@ -460,7 +516,7 @@ export function DataTable({
                                         <TableCell key={field.id} className="py-3 text-sm">
                                             {field.apiName === "name" ? (
                                                 <Link
-                                                    href={`/app/${appApiName}/${objectDef.apiName}/${record.id}`}
+                                                    href={`/app/${appApiName}/${objectDef.apiName}/${record.id}?trash=${isTrash ? "1" : "0"}`}
                                                     className="font-medium text-primary hover:underline"
                                                 >
                                                     {record[field.apiName] || "Untitled"}
@@ -470,6 +526,33 @@ export function DataTable({
                                             )}
                                         </TableCell>
                                     ))}
+                                    {isTrash && (
+                                        <TableCell className="py-3 text-sm">
+                                            <div className="flex gap-1 justify-end">
+                                                {canRestore && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleRestore(record.id)}
+                                                        aria-label="Restore"
+                                                    >
+                                                        <Undo2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                {canPurge && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handlePurge(record.id)}
+                                                        className="text-destructive hover:text-destructive"
+                                                        aria-label="Purge"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                             {data.length === 0 && (
@@ -478,7 +561,7 @@ export function DataTable({
                                         colSpan={columns.length}
                                         className="text-center py-12 text-muted-foreground bg-muted/5"
                                     >
-                                        No records found.
+                                        {isTrash ? "Trash is empty." : "No records found."}
                                     </TableCell>
                                 </TableRow>
                             )}
