@@ -108,7 +108,7 @@ export default async function proxy(req: Request) {
 
     const isAdminRoute = pathname.startsWith("/admin");
 
-    if (!isLoggedIn && isApiRoute && !isAuthApiRoute) {
+    if (!isLoggedIn && isApiRoute && !isAuthApiRoute && pathname !== "/api/health") {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
