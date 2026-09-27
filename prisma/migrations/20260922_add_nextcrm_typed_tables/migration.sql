@@ -1,4 +1,3 @@
-Loaded Prisma config from prisma.config.ts.
 
 -- CreateEnum
 CREATE TYPE "taskStatus" AS ENUM ('ACTIVE', 'PENDING', 'COMPLETE');
