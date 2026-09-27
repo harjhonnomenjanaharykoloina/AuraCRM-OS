@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { getFieldDisplayValue } from "@/lib/field-data";
@@ -30,10 +31,11 @@ import {
 
 export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const sessionUser = getSessionUser(session);
+    if (!sessionUser) return null;
     const t = await getT();
 
-    const organizationId = parseInt((session.user as any).organizationId);
+    const organizationId = sessionUser.organizationId;
     const { id } = await params;
     const userId = parseInt(id, 10);
 

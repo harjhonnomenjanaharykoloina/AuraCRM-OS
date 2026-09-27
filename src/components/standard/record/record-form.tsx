@@ -28,6 +28,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createRecord, updateOwnUserRecord, updateRecord } from "@/actions/standard/record-actions";
+import { updateLeadStatus } from "@/actions/standard/lead-actions";
 import { updateManagedUserRecord } from "@/actions/admin/user-actions";
 import { Loader2 } from "lucide-react";
 import { applyLayoutVisibility, normalizeRecordPageLayoutConfig, type LayoutConfigV2 } from "@/lib/record-page-layout";
@@ -402,12 +403,38 @@ export function RecordForm({
             if (submitOverride) {
                 result = await submitOverride(cleanedValues);
             } else if (record) {
-                result =
-                    submitMode === "ownUserRecord"
-                        ? await updateOwnUserRecord(record.id, cleanedValues)
-                        : submitMode === "adminUserRecord"
-                            ? await updateManagedUserRecord(record.backingUserId, cleanedValues)
-                            : await updateRecord(objectDef.apiName, record.id, cleanedValues);
+                if (submitMode === "ownUserRecord") {
+                    result = await updateOwnUserRecord(record.id, cleanedValues);
+                } else if (submitMode === "adminUserRecord") {
+                    result = await updateManagedUserRecord(record.backingUserId, cleanedValues);
+                } else if (objectDef.apiName === "lead" && cleanedValues.status !== undefined) {
+                    // Route lead status changes through state machine validation
+                    const statusFieldDef = objectDef.fields.find((f: any) => f.apiName === "status");
+                    const statusOption = statusFieldDef?.picklistOptions?.find(
+                        (o: any) => String(o.id) === String(cleanedValues.status)
+                    );
+
+                    if (statusOption) {
+                        const statusResult = await updateLeadStatus(record.id, statusOption.label);
+                        if (!statusResult.success) {
+                            result = statusResult;
+                        } else {
+                            // Remove status from cleanedValues, update remaining fields
+                            const { status: _removed, ...remainingValues } = cleanedValues;
+                            if (Object.keys(remainingValues).length > 0) {
+                                const otherResult = await updateRecord(objectDef.apiName, record.id, remainingValues);
+                                result = otherResult.success ? statusResult : otherResult;
+                            } else {
+                                result = statusResult;
+                            }
+                        }
+                    } else {
+                        // Can't resolve status option, fall through to standard update
+                        result = await updateRecord(objectDef.apiName, record.id, cleanedValues);
+                    }
+                } else {
+                    result = await updateRecord(objectDef.apiName, record.id, cleanedValues);
+                }
             } else {
                 result = await createRecord(objectDef.apiName, cleanedValues);
             }

@@ -58,7 +58,7 @@ function logSecurityEvent(event: string, details: Record<string, unknown>): void
     console.warn(`[middleware] ${event}`, details);
 }
 
-export default async function middleware(req: Request) {
+export default async function proxy(req: Request) {
     const { pathname } = new URL(req.url);
     const isAuthApiRoute = pathname.startsWith("/api/auth");
 

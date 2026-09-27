@@ -1,10 +1,10 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { buildFieldDataPayload, getFieldDisplayValue } from "@/lib/field-data";
 import { enqueueSharingRuleRecompute } from "@/lib/jobs/sharing-rule-jobs";
-import { getUserPermissionSetIds } from "@/lib/permissions";
+import { getUserPermissionSetIds, invalidateUserPermissionCache } from "@/lib/permissions";
 import { normalizeStoredUniqueValue, normalizeUniqueValue } from "@/lib/unique";
 import { validateRecordData } from "@/lib/validation/record-validation";
 import {
@@ -30,22 +30,6 @@ import {
     evaluateCustomLogicExpression,
     evaluateOperator,
 } from "@/lib/validation/rule-logic";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 type ValidationConditionWithFields = ValidationCondition & {
     fieldDef?: { apiName: string; type: string } | null;
@@ -388,8 +372,7 @@ function formatZodFieldErrors(error: z.ZodError) {
 
 export async function inviteUser(data: z.infer<typeof inviteUserSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = inviteUserSchema.parse(data);
         const hashedPassword = await bcrypt.hash(validated.password, BCRYPT_COST);
@@ -443,8 +426,7 @@ export async function inviteUser(data: z.infer<typeof inviteUserSchema>) {
 
 export async function assignPermissionSet(userId: number, permissionSetId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const targetUser = await db.user.findFirst({
             where: { id: userId, organizationId },
@@ -496,6 +478,7 @@ export async function assignPermissionSet(userId: number, permissionSetId: numbe
         }
 
         revalidatePath(`/admin/users/${userId}`);
+        await invalidateUserPermissionCache(userId);
         return { success: true };
     } catch (error: any) {
         if (error.code === "P2002") {
@@ -508,8 +491,7 @@ export async function assignPermissionSet(userId: number, permissionSetId: numbe
 
 export async function removePermissionAssignment(userId: number, permissionSetId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const assignment = await db.permissionSetAssignment.findFirst({
             where: {
@@ -551,6 +533,7 @@ export async function removePermissionAssignment(userId: number, permissionSetId
         });
 
         revalidatePath(`/admin/users/${userId}`);
+        await invalidateUserPermissionCache(userId);
         return { success: true };
     } catch (error: any) {
         console.error("Remove permission assignment error:", error);
@@ -564,8 +547,7 @@ export async function removePermissionAssignment(userId: number, permissionSetId
  */
 export async function assignPermissionSetGroup(userId: number, groupId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const targetUser = await db.user.findFirst({
             where: { id: userId, organizationId },
@@ -638,6 +620,7 @@ export async function assignPermissionSetGroup(userId: number, groupId: number) 
         });
 
         revalidatePath(`/admin/users/${userId}`);
+        await invalidateUserPermissionCache(userId);
         return { success: true, assignedCount: permissionSetIds.length };
     } catch (error: any) {
         console.error("Assign permission set group error:", error);
@@ -650,8 +633,7 @@ export async function updateManagedUserAccount(
     data: z.infer<typeof managedUserAccountSchema>
 ) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = managedUserAccountSchema.parse(data);
 
@@ -723,8 +705,7 @@ export async function updateManagedUserProfile(
     data: z.infer<typeof managedUserProfileSchema>
 ) {
     try {
-        const { userId: actingUserId, organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { userId: actingUserId, organizationId } = await requireAdmin();
 
         const validated = managedUserProfileSchema.safeParse(data);
         if (!validated.success) {
@@ -945,8 +926,7 @@ export async function updateManagedUserProfile(
 
 export async function updateManagedUserRecord(userId: number, data: Record<string, any>) {
     try {
-        const { userId: actingUserId, organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { userId: actingUserId, organizationId } = await requireAdmin();
 
         const permissionSetIds = await getUserPermissionSetIds(actingUserId);
         const record = await db.record.findFirst({

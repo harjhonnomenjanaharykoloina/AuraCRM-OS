@@ -1,3 +1,6 @@
+import { Prisma } from "@prisma/client";
+import { CacheKeys, getOrSet, invalidatePattern } from "@/lib/cache";
+import { logDebug, logError } from "@/lib/logger";
 import { db } from "@/lib/db";
 import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 
@@ -22,7 +25,7 @@ export type ObjectPermissionFields = {
     allowModifyListViews: boolean;
 };
 
-type ObjectAccessSummary = {
+export type ObjectAccessSummary = {
     canReadOwn: boolean;
     canCreate: boolean;
     canEditOwn: boolean;
@@ -42,25 +45,66 @@ const EMPTY_ACCESS: ObjectAccessSummary = Object.freeze({
     canModifyListViews: false,
 });
 
+const PERMISSION_SET_CACHE_TTL_SECONDS = 5 * 60;
+
 /**
- * Helper function to get all Permission Set IDs for a user.
- * This includes:
- * 1. Direct assignments (User -> PermissionSet)
- * 2. Group-based assignments (User -> Group -> PermissionSets)
- * 
- * Note: The schema doesn't have PermissionSetGroupAssignment, so groups are
- * expanded at assignment time via the assignPermissionSetGroup action.
+ * Resolves all Permission Set IDs for a user, combining:
+ * 1. Direct assignments (PermissionSetAssignment)
+ * 2. Group-based assignments (User -> PermissionSetGroupAssignment ->
+ *    PermissionSetGroupMember -> PermissionSet)
+ *
+ * Results are cached for 5 minutes via the Redis cache layer.
  */
 export async function getUserPermissionSetIds(userId: number): Promise<number[]> {
     if (!userId || isNaN(userId)) return [];
 
-    // Fetch direct permission set assignments
-    const directAssignments = await db.permissionSetAssignment.findMany({
-        where: { userId },
-        select: { permissionSetId: true },
-    });
+    const cached = await getOrSet<number[]>(
+        CacheKeys.userPermissionSets(userId),
+        PERMISSION_SET_CACHE_TTL_SECONDS,
+        async () => {
+            const [directAssignments, groupAssignments] = await Promise.all([
+                db.permissionSetAssignment.findMany({
+                    where: { userId },
+                    select: { permissionSetId: true },
+                }),
+                db.permissionSetGroupAssignment.findMany({
+                    where: { userId },
+                    select: { permissionSetGroupId: true },
+                }),
+            ]);
 
-    return directAssignments.map(a => a.permissionSetId);
+            const ids = new Set<number>();
+            for (const assignment of directAssignments) {
+                ids.add(assignment.permissionSetId);
+            }
+
+            const groupIds = [...new Set(groupAssignments.map(a => a.permissionSetGroupId))];
+            if (groupIds.length > 0) {
+                const groupMembers = await db.permissionSetGroupMember.findMany({
+                    where: { permissionSetGroupId: { in: groupIds } },
+                    select: { permissionSetId: true },
+                });
+                for (const member of groupMembers) {
+                    ids.add(member.permissionSetId);
+                }
+            }
+
+            return Array.from(ids);
+        }
+    );
+
+    const count = (cached ?? []).length;
+    logDebug("getUserPermissionSetIds resolved", { userId, permissionSetCount: count });
+
+    return cached ?? [];
+}
+
+export async function invalidateUserPermissionCache(userId: number): Promise<void> {
+    await Promise.all([
+        invalidatePattern(CacheKeys.userPermissionSets(userId)),
+        invalidatePattern(CacheKeys.userObjectAccess(userId, "*")),
+        invalidatePattern(CacheKeys.userContext(userId, "*")),
+    ]);
 }
 
 export function sanitizeUserObjectPermissions<T extends ObjectPermissionFields>(
@@ -127,13 +171,19 @@ async function buildObjectAccessMap(
     targetObjectDefId?: number
 ): Promise<Map<number, ObjectAccessSummary>> {
     const permissionSetIds = await getUserPermissionSetIds(userId);
+    logDebug("buildObjectAccessMap resolved permission set IDs", {
+        userId,
+        organizationId,
+        permissionSetCount: permissionSetIds.length,
+        targetObjectDefId: targetObjectDefId ?? null,
+    });
     const accessMap = new Map<number, ObjectAccessSummary>();
 
     if (permissionSetIds.length === 0) {
         return accessMap;
     }
 
-    const whereClause: any = {
+    const whereClause: Prisma.ObjectPermissionWhereInput = {
         permissionSetId: { in: permissionSetIds },
         objectDef: {
             organizationId,
@@ -240,7 +290,7 @@ export async function checkPermission(
 ): Promise<boolean> {
     // Validate inputs
     if (!userId || isNaN(userId) || !organizationId || isNaN(organizationId)) {
-        console.error("Invalid userId or organizationId in checkPermission");
+        logError("Invalid userId or organizationId in checkPermission", { userId, organizationId });
         return false;
     }
 
@@ -264,7 +314,7 @@ export async function checkPermission(
 export async function getAvailableApps(userId: number, organizationId: number, _userType: string) {
     // Validate inputs
     if (!userId || isNaN(userId) || !organizationId || isNaN(organizationId)) {
-        console.error("Invalid userId or organizationId in getAvailableApps", { userId, organizationId });
+        logError("Invalid userId or organizationId in getAvailableApps", { userId, organizationId });
         return [];
     }
 
@@ -309,7 +359,7 @@ export async function hasSystemPermission(
     permission: SystemPermission
 ): Promise<boolean> {
     if (!userId || isNaN(userId) || !organizationId || isNaN(organizationId)) {
-        console.error("Invalid userId or organizationId in hasSystemPermission");
+        logError("Invalid userId or organizationId in hasSystemPermission", { userId, organizationId });
         return false;
     }
 
@@ -317,15 +367,26 @@ export async function hasSystemPermission(
     if (permissionSetIds.length === 0) return false;
 
     if (permission === "dataLoading") {
-        const match = await db.permissionSet.findFirst({
-            where: {
-                id: { in: permissionSetIds },
+        try {
+            const match = await db.permissionSet.findFirst({
+                where: {
+                    id: { in: permissionSetIds },
+                    organizationId,
+                    allowDataLoading: true,
+                },
+                select: { id: true },
+            });
+            return Boolean(match);
+        } catch (error) {
+            logError("hasSystemPermission database query failed", {
+                userId,
                 organizationId,
-                allowDataLoading: true,
-            },
-            select: { id: true },
-        });
-        return Boolean(match);
+                permission,
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined,
+            });
+            return false;
+        }
     }
 
     return false;

@@ -31,13 +31,14 @@ import { DeleteRecordPageAssignmentButton } from "@/components/admin/objects/del
 import { DeleteRecordPageLayoutButton } from "@/components/admin/objects/delete-record-page-layout-button";
 import { getObjectDeleteProtection } from "@/lib/metadata-dependencies";
 import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
+import { getSessionUser } from "@/lib/auth/types";
 
 export default async function ObjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const organizationId = user.organizationId;
     const { id } = await params;
     const objectId = parseInt(id);
 

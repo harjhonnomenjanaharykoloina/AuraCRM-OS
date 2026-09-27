@@ -1,25 +1,9 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 const queueSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -28,8 +12,7 @@ const queueSchema = z.object({
 
 export async function createQueue(data: z.infer<typeof queueSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = queueSchema.parse(data);
 
@@ -53,8 +36,7 @@ export async function createQueue(data: z.infer<typeof queueSchema>) {
 
 export async function updateQueue(queueId: number, data: z.infer<typeof queueSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = queueSchema.parse(data);
 
@@ -84,8 +66,7 @@ export async function updateQueue(queueId: number, data: z.infer<typeof queueSch
 
 export async function deleteQueue(queueId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const existing = await db.queue.findUnique({
             where: { id: queueId, organizationId },
@@ -114,8 +95,7 @@ const queueMemberSchema = z.object({
 
 export async function addQueueMember(queueId: number, userId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = queueMemberSchema.parse({ queueId, userId });
 
@@ -133,6 +113,7 @@ export async function addQueueMember(queueId: number, userId: number) {
             data: {
                 queueId: validated.queueId,
                 userId: validated.userId,
+                organizationId,
             },
         });
 
@@ -148,8 +129,7 @@ export async function addQueueMember(queueId: number, userId: number) {
 
 export async function removeQueueMember(queueId: number, userId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const queue = await db.queue.findUnique({
             where: { id: queueId, organizationId },

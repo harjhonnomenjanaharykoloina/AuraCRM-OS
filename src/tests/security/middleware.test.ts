@@ -6,7 +6,7 @@ vi.mock("@/lib/auth/proxy", () => ({
     getProxySession: mockGetProxySession,
 }));
 
-import middleware, { config } from "@/middleware";
+import proxy, { config } from "@/proxy";
 
 function makeRequest(url: string): Request {
     return new Request(url);
@@ -25,13 +25,13 @@ describe("middleware - security", () => {
         });
 
         it("redirects unauthenticated requests to non-public routes to /login", async () => {
-            const res = await middleware(makeRequest("http://localhost/app/dashboard"));
+            const res = await proxy(makeRequest("http://localhost/app/dashboard"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/login$/);
         });
 
         it("redirects unauthenticated requests to /admin to /login", async () => {
-            const res = await middleware(makeRequest("http://localhost/admin/users"));
+            const res = await proxy(makeRequest("http://localhost/admin/users"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/login$/);
         });
@@ -45,19 +45,19 @@ describe("middleware - security", () => {
         });
 
         it("redirects authenticated users visiting /login to /app/dashboard", async () => {
-            const res = await middleware(makeRequest("http://localhost/login"));
+            const res = await proxy(makeRequest("http://localhost/login"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
         });
 
         it("redirects authenticated users visiting /register to /app/dashboard", async () => {
-            const res = await middleware(makeRequest("http://localhost/register"));
+            const res = await proxy(makeRequest("http://localhost/register"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
         });
 
         it("redirects authenticated users visiting / to /app/dashboard", async () => {
-            const res = await middleware(makeRequest("http://localhost/"));
+            const res = await proxy(makeRequest("http://localhost/"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
         });
@@ -68,7 +68,7 @@ describe("middleware - security", () => {
             mockGetProxySession.mockResolvedValue({
                 user: { id: "1", organizationId: 1, userType: "standard" },
             });
-            const res = await middleware(makeRequest("http://localhost/admin/users"));
+            const res = await proxy(makeRequest("http://localhost/admin/users"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
         });
@@ -77,7 +77,7 @@ describe("middleware - security", () => {
             mockGetProxySession.mockResolvedValue({
                 user: { id: "1", organizationId: 1, userType: "admin" },
             });
-            const res = await middleware(makeRequest("http://localhost/admin/users"));
+            const res = await proxy(makeRequest("http://localhost/admin/users"));
             expect(res.status).toBe(200);
         });
 
@@ -85,7 +85,7 @@ describe("middleware - security", () => {
             mockGetProxySession.mockResolvedValue({
                 user: { id: "1", organizationId: 1, userType: "standard" },
             });
-            const res = await middleware(makeRequest("http://localhost/app/dashboard"));
+            const res = await proxy(makeRequest("http://localhost/app/dashboard"));
             expect(res.status).toBe(200);
         });
     });
@@ -115,7 +115,7 @@ describe("middleware - security", () => {
             mockGetProxySession.mockResolvedValue({
                 user: { id: "1", organizationId: 1, userType: "admin" },
             });
-            const res = await middleware(makeRequest("http://localhost/logo.png"));
+            const res = await proxy(makeRequest("http://localhost/logo.png"));
             expect(res.status).toBe(200);
         });
     });
@@ -128,18 +128,18 @@ describe("middleware - security", () => {
         it.each(["/", "/login", "/register"])(
             "allows unauthenticated access to %s",
             async (path) => {
-                const res = await middleware(makeRequest(`http://localhost${path}`));
+                const res = await proxy(makeRequest(`http://localhost${path}`));
                 expect(res.status).toBe(200);
             }
         );
 
         it("returns 401 for unauthenticated non-auth API routes", async () => {
-            const res = await middleware(makeRequest("http://localhost/api/contacts"));
+            const res = await proxy(makeRequest("http://localhost/api/contacts"));
             expect(res.status).toBe(401);
         });
 
         it("does not challenge auth API routes", async () => {
-            const res = await middleware(
+            const res = await proxy(
                 makeRequest("http://localhost/api/auth/session")
             );
             expect(res.status).toBe(200);

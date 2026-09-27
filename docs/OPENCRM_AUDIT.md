@@ -3,6 +3,26 @@
 This document catalogs all features and capabilities of the OpenCRM project as observed in the codebase.
 
 ---
+## License
+
+openCRM is licensed under the **MIT License** (Copyright (c) 2026 Ayas A.Hadi).
+
+| Field | Value |
+|-------|-------|
+| **License** | MIT License |
+| **Copyright holder** | Ayas A.Hadi |
+| **Copyright year** | 2026 |
+| **Package name** | `opencrm` |
+
+| Field | Value |
+|-------|-------|
+| **NextCRM reference** | MIT License, Copyright (c) 2023 Pavel Dovhomilja |
+
+> **Attribution:** openCRM is modeled on NextCRM (`github.com/pdovhomilja/nextcrm-app`).
+> Both copyright notices must be preserved in distributions. See
+> `docs/LICENSES.md` §7 for full attribution requirements.
+
+---
 
 ## 1. Project Overview
 
@@ -14,7 +34,7 @@ This document catalogs all features and capabilities of the OpenCRM project as o
 | Runtime | Node.js (Edge/Server Actions via Bun-compatible `use server`) |
 | Language | TypeScript |
 | Database | PostgreSQL (via Prisma ORM) |
-| Auth | BetterAuth (customized) with bcrypt password hashing |
+| Auth | Better-Auth 1.7.x + NextAuth.js v5 (username plugin, email OTP, Google OAuth) |
 | UI | React 19, Tailwind CSS, shadcn/ui, lucide-react, recharts |
 | Deployment | Vercel (Next.js optimized) |
 | Package Manager | Bun |
@@ -86,10 +106,12 @@ src/
 
 ### Auth Provider (`src/auth.ts`)
 
-- Uses BetterAuth framework with:
-  - Credential-based email/password authentication
-  - bcrypt password hashing (`BCRYPT_COST` factor)
-  - Session management (token-based, expiry)
+- Uses **Better-Auth 1.7.x** (primary) with **NextAuth.js v5** (OAuth bridge):
+  - **Username plugin** — credential-based username/email + password authentication
+  - **bcrypt password hashing** (`BCRYPT_COST` factor, cost 12)
+  - **Email OTP** — passwordless 6-digit code flow (5-min expiry)
+  - **Google OAuth** — via NextAuth.js v5 Google provider (`@auth/core` providers)
+  - Session management (JWT-based, token expiry + refresh)
   - Account linking (multiple providers per user)
   - Email verification flow support
   - Password reset flow support
@@ -182,7 +204,13 @@ src/
 #### Session / Account / Verification
 - Standard BetterAuth models for session/token management
 
-### 5.2 Metadata Layer (EAV Architecture)
+### 5.2 Metadata Layer (EAV Architecture) — 1267-line schema, EAV pattern
+
+**Core EAV entities:** `Organization`, `User`, `PermissionSet`,
+`ObjectDefinition`, `FieldDefinition`, `Record`, `FieldData`, `RecordShare`.
+The schema is **1267 lines** and uses the **EAV paradigm**: a universal `Record`
+table stores ownership/metadata, while `FieldData` holds typed cell values per
+field definition. **~47 models total** (vs NextCRM's ~60 typed tables).
 
 | Model | Description |
 |-------|-------------|
@@ -590,3 +618,23 @@ All dashboard actions respect:
 - Configurable filters with ALL/ANY/CUSTOM logical operators
 - Owner scope filtering (mine/queue/any)
 - Theme-aware rendering using `WIDGET_THEMES` and `CHART_COLORS`
+
+---
+
+## 15. Critical Gaps vs. NextCRM
+
+The following table consolidates the critical architectural divergences identified
+in the latest audit. These are **not bugs** — they are deliberate design choices
+that define the migration's highest-risk integration points:
+
+| # | Gap | openCRM (current) | NextCRM (reference) | Migration Impact |
+|---|-----|--------------------|---------------------|------------------|
+| CG-01 | **Multi-tenancy** | Full 3-layer isolation: `Organization` model + `User.organizationId` + org-scoped queries + `buildRecordAccessFilter` (org-scoped EXISTS subquery) on all tables. Schema is 1267 lines with EAV pattern. | Single-instance. `Users` table has **no `organizationId`**. No `Organization` model. ~2017-line schema with ~60 typed tables. | **Highest priority.** Must inject `organizationId` into every NextCRM table. Every scope helper in `lib/authz/scopes/*` needs org filtering. Every query, every test, every MCP tool must be org-scoped. Affects ALL phases. |
+| CG-02 | **Auth model** | Better-Auth 1.7.x + NextAuth.js v5: bcrypt (cost 12), username plugin, email OTP, Google OAuth, JWT sessions. | Better-Auth only: email OTP (6-digit, 5-min expiry), Google OAuth, admin plugin with `ac` access control. No password auth. Auth modules: `lib/auth.ts`, `lib/auth-permissions.ts`, `lib/auth-server.ts`, `lib/auth-guards.ts`, `lib/authz/session.ts`, `lib/authz/route.ts`, `lib/auth-client.ts`. | Converge auth model in Phase 2. Preserve openCRM's multi-method approach. Standardize on Better-Auth admin plugin + `ac` statements for RBAC. Auth module file layout must align. |
+| CG-03 | **EAV vs concrete model** | EAV: `Record` + `FieldData` pattern — ~47 models, runtime-customizable objects. Schema 1267 lines. | ~60 typed Prisma models (concrete tables: `crm_Accounts`, `crm_Contacts`, `crm_Leads`, `crm_Opportunities`, `crm_Contracts`, `crm_Activities`, `crm_Invoices`, `crm_Document_Chunks`, etc.). ~2017-line schema. No `Record`/`FieldData` EAV. | Hybrid persistence required: EAV for custom objects, typed tables for standard CRM entities. Unified scope helpers must work across both patterns. |
+| CG-04 | **Soft-delete wiring** | `Record.isDeleted` in schema (4 migrations) + migration `20260918_add_soft_delete_to_record`, but `deleteRecord` hard-deletes; reads never filter `isDeleted`. | `deletedAt`/`deletedBy` on all CRM entities; soft-delete wired in all read paths + restore via `recycle.ts`. | Must wire soft-delete at the application layer (reads + `deleteRecord`) before sync/search/MCP can operate safely. |
+| CG-05 | **Root-level directory structure** | Uses `src/` layout (`src/actions/`, `src/lib/`, `src/app/`). | Uses root-level `lib/`, `app/`, `prisma/` — NOT `src/`. | Import path remapping required. openCRM engineers must adjust aliases when porting NextCRM code. |
+
+---
+
+*Document generated from static analysis of the openCRM codebase. Last updated: 2026-09-22.*

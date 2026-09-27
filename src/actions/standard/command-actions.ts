@@ -95,7 +95,7 @@ export async function getCommandItems(search?: string): Promise<CommandItem[]> {
         });
     }
 
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (
         await db.user.findUnique({
             where: { id: userId },

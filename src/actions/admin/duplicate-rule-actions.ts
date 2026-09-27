@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import {
     removeDependenciesForSource,
@@ -11,21 +11,6 @@ import { MetadataDependencySourceType, DuplicateRuleAction } from "@prisma/clien
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 const duplicateRuleSchema = z.object({
     objectDefId: z.number(),
@@ -85,8 +70,7 @@ function toAction(value: "NONE" | "WARN" | "BLOCK") {
 
 export async function createDuplicateRule(data: z.infer<typeof duplicateRuleSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const payload = duplicateRuleSchema.parse(data);
         const fieldDefIds = await validateRuleFields(organizationId, payload.objectDefId, payload.fieldDefIds);
@@ -140,8 +124,7 @@ export async function createDuplicateRule(data: z.infer<typeof duplicateRuleSche
 
 export async function updateDuplicateRule(ruleId: number, data: z.infer<typeof duplicateRuleSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const payload = duplicateRuleSchema.parse(data);
         const existing = await db.duplicateRule.findFirst({
@@ -201,8 +184,7 @@ export async function updateDuplicateRule(ruleId: number, data: z.infer<typeof d
 
 export async function deleteDuplicateRule(ruleId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.duplicateRule.findFirst({
             where: { id: ruleId, organizationId },
@@ -227,8 +209,7 @@ export async function deleteDuplicateRule(ruleId: number) {
 
 export async function toggleDuplicateRule(ruleId: number, isActive: boolean) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.duplicateRule.findFirst({
             where: { id: ruleId, organizationId },
@@ -253,8 +234,7 @@ export async function toggleDuplicateRule(ruleId: number, isActive: boolean) {
 
 export async function reorderDuplicateRules(objectDefId: number, ruleIds: number[]) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rules = await db.duplicateRule.findMany({
             where: {

@@ -117,6 +117,17 @@ export async function register(data: z.infer<typeof registerSchema>) {
                 data: { ownerId: user.id },
             });
 
+            // 3b. Create the org admin membership for the registering user
+            await tx.organizationMember.create({
+                data: {
+                    userId: user.id,
+                    organizationId: organization.id,
+                    role: "org_admin",
+                    isDefault: true,
+                    isActive: true,
+                },
+            });
+
             return { organization, user };
         });
 

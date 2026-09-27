@@ -3,9 +3,9 @@ import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
-import { deleteFileSafe, resolveStoragePath } from "@/lib/file-storage";
+import { getStorageProvider } from "@/lib/storage/factory";
 import { checkRateLimit, dataRateLimiter, tooManyRequestsResponse } from "@/lib/api-rate-limit";
-import { promises as fs } from "fs";
+import { getSessionUser } from "@/lib/auth/types";
 
 export const runtime = "nodejs";
 
@@ -19,13 +19,13 @@ export async function GET(
 ) {
     try {
         const session = await auth();
-        if (!session?.user) {
+        const user = getSessionUser(session);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = session.user as any;
         const userId = parseInt(user.id);
-        const organizationId = parseInt(user.organizationId);
+        const organizationId = user.organizationId;
         const { id } = await params;
         const attachmentId = Number(id);
 
@@ -70,7 +70,7 @@ export async function GET(
                 return NextResponse.json({ error: "Forbidden" }, { status: 403 });
             }
 
-            const queueIds = await getUserQueueIds(userId);
+            const queueIds = await getUserQueueIds(userId, organizationId);
             const userGroupId = (await db.user.findUnique({
                 where: { id: userId },
                 select: { groupId: true },
@@ -89,13 +89,15 @@ export async function GET(
             }
         }
 
-        const absolutePath = resolveStoragePath(attachment.storagePath);
-        const fileBuffer = await fs.readFile(absolutePath);
+        const fileBuffer = await getStorageProvider().read(attachment.storagePath);
+        if (!fileBuffer) {
+            return NextResponse.json({ error: "File not found" }, { status: 404 });
+        }
         const url = new URL(request.url);
         const inline = url.searchParams.get("inline") === "1";
         const filename = sanitizeFilename(attachment.filename || attachment.displayName || "attachment");
 
-        return new NextResponse(fileBuffer, {
+        return new NextResponse(Buffer.from(fileBuffer), {
             headers: {
                 "Content-Type": attachment.mimeType || "application/octet-stream",
                 "Content-Disposition": `${inline ? "inline" : "attachment"}; filename=\"${filename}\"`,
@@ -114,13 +116,13 @@ export async function DELETE(
 ) {
     try {
         const session = await auth();
-        if (!session?.user) {
+        const user = getSessionUser(session);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = session.user as any;
         const userId = parseInt(user.id);
-        const organizationId = parseInt(user.organizationId);
+        const organizationId = user.organizationId;
         const { id } = await params;
         const attachmentId = Number(id);
 
@@ -171,7 +173,7 @@ export async function DELETE(
                 return NextResponse.json({ error: "Forbidden" }, { status: 403 });
             }
 
-            const queueIds = await getUserQueueIds(userId);
+            const queueIds = await getUserQueueIds(userId, organizationId);
             const userGroupId = (await db.user.findUnique({
                 where: { id: userId },
                 select: { groupId: true },
@@ -192,8 +194,7 @@ export async function DELETE(
         }
 
         if (attachment.storagePath) {
-            const absolutePath = resolveStoragePath(attachment.storagePath);
-            await deleteFileSafe(absolutePath);
+            await getStorageProvider().delete(attachment.storagePath);
         }
 
         await fileAttachmentDelegate.delete({ where: { id: attachment.id } });

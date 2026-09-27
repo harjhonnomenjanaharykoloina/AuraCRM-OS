@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getUserContext } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { checkPermission, hasSystemPermission } from "@/lib/permissions";
 import { z } from "zod";
@@ -62,11 +62,7 @@ export async function startImport(
     formData: FormData
 ): Promise<ImportActionState> {
     try {
-        const session = await auth();
-        if (!session?.user) throw new Error("Unauthorized");
-        const user = session.user as any;
-        const organizationId = parseInt(user.organizationId);
-        const userId = parseInt(user.id);
+        const { userId, organizationId } = await getUserContext();
 
         const rawObjectApiName = formData.get("objectApiName");
         const rawMode = formData.get("mode");
@@ -229,11 +225,7 @@ export async function startImport(
 
 export async function deleteImportJob(jobId: number, objectApiName: string) {
     try {
-        const session = await auth();
-        if (!session?.user) throw new Error("Unauthorized");
-        const user = session.user as any;
-        const organizationId = parseInt(user.organizationId);
-        const userId = parseInt(user.id);
+        const { userId, organizationId } = await getUserContext();
 
         const canRead = await checkPermission(userId, organizationId, objectApiName, "read");
         if (!canRead) throw new Error("Unauthorized");

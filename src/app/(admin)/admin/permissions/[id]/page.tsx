@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
@@ -50,10 +51,10 @@ function PermissionHeader({ t, name }: { t: TFunction; name: PermissionHeaderNam
 
 export default async function PermissionSetDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const organizationId = user.organizationId;
     const { id } = await params;
     const permissionSetId = parseInt(id);
 

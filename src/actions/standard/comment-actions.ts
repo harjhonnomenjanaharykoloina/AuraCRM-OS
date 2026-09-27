@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getUserContext } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { checkPermission } from "@/lib/permissions";
@@ -29,25 +29,13 @@ function extractMentionUsernames(bodyText: string) {
     return Array.from(usernames);
 }
 
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
-    const user = session.user as any;
-    const userId = parseInt(user.id);
-    const organizationId = parseInt(user.organizationId);
-    if (Number.isNaN(userId) || Number.isNaN(organizationId)) {
-        throw new Error("Invalid session");
-    }
-    return { userId, organizationId };
-}
-
 async function getReadableRecord(
     recordId: number,
     userId: number,
     organizationId: number,
     canReadAll: boolean
 ) {
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId =
         (await db.user.findUnique({
             where: { id: userId },

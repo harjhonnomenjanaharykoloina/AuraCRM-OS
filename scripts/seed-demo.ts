@@ -65,6 +65,17 @@ async function main() {
             data: { ownerId: user.id },
         });
 
+        // Create the org admin membership for the seeded admin
+        await prisma.organizationMember.create({
+            data: {
+                userId: user.id,
+                organizationId: organization.id,
+                role: "org_admin",
+                isDefault: true,
+                isActive: true,
+            },
+        });
+
         console.log(`✅ Admin user created: ${username} / ${password}`);
         console.log(`✅ Organization created: ${orgName} (id: ${organization.id})`);
     }
@@ -152,14 +163,26 @@ async function seedDemoData(prisma: PrismaClient, organizationId: number) {
             createdUsers.push(user);
         }
 
+        // Create org membership rows for each seeded demo user (non-default members)
+        await tx.organizationMember.createMany({
+            data: createdUsers.map((u) => ({
+                userId: u.id,
+                organizationId,
+                role: "org_member",
+                isDefault: false,
+                isActive: true,
+            })),
+            skipDuplicates: true,
+        });
+
         // User companion records for demo users (skip admin - createOrgTemplate handles differently)
         const jiraUsers = [createdUsers[0].id, createdUsers[1].id, createdUsers[2].id];
         const healthUsers = [createdUsers[3].id, createdUsers[4].id];
 
         await tx.queueMember.createMany({
             data: [
-                ...jiraUsers.map((userId) => ({ queueId: jiraQueue.id, userId })),
-                ...healthUsers.map((userId) => ({ queueId: healthQueue.id, userId })),
+                ...jiraUsers.map((userId) => ({ queueId: jiraQueue.id, userId, organizationId })),
+                ...healthUsers.map((userId) => ({ queueId: healthQueue.id, userId, organizationId })),
             ],
         });
 

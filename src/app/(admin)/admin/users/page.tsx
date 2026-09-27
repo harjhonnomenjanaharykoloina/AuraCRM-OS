@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import {
@@ -17,9 +18,10 @@ import { InviteUserDialog } from "@/components/admin/users/invite-user-dialog";
 
 export default async function UsersPage() {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
 
     const users = await db.user.findMany({
         where: { organizationId },

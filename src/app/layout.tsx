@@ -4,6 +4,7 @@ import "./globals.css";
 import { getLocale } from "@/i18n/server";
 import { I18nProvider } from "@/i18n/client";
 import { Providers } from "@/components/providers";
+import CommandPalette from "@/components/command-palette";
 
 export const metadata: Metadata = {
     title: "AuraCRM — Open Source CRM",
@@ -29,6 +30,7 @@ export default async function RootLayout({
                     <Providers initialLocale={locale}>
                         {children}
                     </Providers>
+                    <CommandPalette />
                 </I18nProvider>
             </body>
         </html>

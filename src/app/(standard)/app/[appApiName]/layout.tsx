@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { StandardShell } from "@/components/standard/layout/standard-shell";
 import { getAvailableApps, getReadableObjectIds } from "@/lib/permissions";
 import { getUserCompanionRecordId } from "@/lib/user-companion";
+import { getSessionUser } from "@/lib/auth/types";
 
 export default async function AppIdLayout({
     children,
@@ -13,11 +14,11 @@ export default async function AppIdLayout({
     params: Promise<{ appApiName: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) redirect("/login");
+    const user = getSessionUser(session);
+    if (!user) redirect("/login");
 
     const { appApiName } = await params;
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const organizationId = user.organizationId;
     const isAdmin = user.userType === "admin";
     const userId = parseInt(user.id);
 

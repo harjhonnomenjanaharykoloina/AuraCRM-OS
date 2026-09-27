@@ -22,7 +22,15 @@ export function ConvertLeadButton({ objectApiName, recordId }: ConvertLeadButton
                 startTransition(async () => {
                     const result = await convertLead(objectApiName, recordId);
                     if (result.success) {
-                        toast.success("Lead converted");
+                        if (result.alreadyConverted) {
+                            toast.success("Lead already converted", {
+                                description: `Contact: ${result.contactId ?? "—"}, Company: ${result.companyId ?? "—"}, Opportunity: ${result.opportunityId ?? "—"}`,
+                            });
+                        } else {
+                            toast.success("Lead converted", {
+                                description: `Contact: ${result.contactId}, Company: ${result.companyId ?? "—"}, Opportunity: ${result.opportunityId}`,
+                            });
+                        }
                         router.refresh();
                     } else {
                         toast.error(result.error || "Failed to convert lead");

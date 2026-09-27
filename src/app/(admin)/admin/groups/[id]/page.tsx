@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
@@ -15,13 +16,14 @@ import { RemoveGroupMemberButton } from "@/components/admin/groups/remove-group-
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
     const { id } = await params;
     const groupId = parseInt(id, 10);
     if (isNaN(groupId)) return notFound();
 
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
 
     const group = await db.group.findUnique({
         where: { id: groupId, organizationId },

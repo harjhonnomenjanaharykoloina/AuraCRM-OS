@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getAvailableApps } from "@/lib/permissions";
+import { getSessionUser } from "@/lib/auth/types";
 import { db } from "@/lib/db";
 
 export default async function AppPage({
@@ -9,12 +10,12 @@ export default async function AppPage({
     params: Promise<{ appApiName: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) redirect("/login");
+    const user = getSessionUser(session);
+    if (!user) redirect("/login");
 
     const { appApiName } = await params;
-    const user = session.user as any;
     const userId = parseInt(user.id);
-    const organizationId = parseInt(user.organizationId);
+    const organizationId = user.organizationId;
     const apps = await getAvailableApps(userId, organizationId, user.userType);
     const currentApp = apps.find((app) => app.apiName === appApiName);
 

@@ -2,9 +2,13 @@ import bcryptjs from "bcryptjs"
 import { betterAuth } from "better-auth"
 import { prismaAdapter } from "@better-auth/prisma-adapter"
 import { username } from "better-auth/plugins/username"
+import { emailOTP, testUtils } from "better-auth/plugins"
+import { admin as adminPlugin } from "better-auth/plugins"
 import { toNextJsHandler } from "better-auth/next-js"
 import { db } from "@/lib/db"
 import { BCRYPT_COST } from "@/lib/crypto"
+import { sendVerificationOTPEmail } from "@/lib/email"
+import { ac, admin, manager, user } from "@/lib/auth/permissions"
 
 const WEAK_SECRET_VALUES = new Set([
     "replace-with-a-strong-secret",
@@ -61,6 +65,20 @@ export const betterAuthInstance = betterAuth({
     database: prismaAdapter(db, {
         provider: "postgresql",
     }),
+    secret: authSecret,
+    onAPIError: {
+        throw: true,
+    },
+    cookie: {
+        // In production, cookies must only be sent over HTTPS
+        secure: process.env.NODE_ENV === "production",
+        // SameSite=Lax prevents CSRF on cross-site requests (middleware CSRF check is defense-in-depth)
+        sameSite: "lax",
+        // Prevent JavaScript access to session cookies
+        httpOnly: true,
+        // 30-day session, aligned with better-auth JWT strategy
+        maxAge: 30 * 24 * 60 * 60,
+    },
     emailAndPassword: {
         enabled: true,
         autoSignIn: true,
@@ -95,14 +113,42 @@ export const betterAuthInstance = betterAuth({
                 type: "string",
                 required: true,
             },
+            role: {
+                type: "string",
+                defaultValue: "user",
+                input: false,
+            },
+        },
+    },
+    socialProviders: {
+        google: {
+            clientId: process.env.GOOGLE_ID!,
+            clientSecret: process.env.GOOGLE_SECRET!,
         },
     },
     plugins: [
         username({
             displayUsername: false,
         }),
+        emailOTP({
+            sendVerificationOTP: async ({ email, otp, type }) => {
+                if (process.env.NODE_ENV !== "production") {
+                    console.log(`[Auth] OTP for ${email}: ${otp} (${type})`)
+                    return
+                }
+                await sendVerificationOTPEmail(email, otp, type)
+            },
+            disableSignUp: false,
+        }),
+        ...(process.env.NODE_ENV !== "production"
+            ? [testUtils({ captureOTP: true })]
+            : []),
+        adminPlugin({
+            ac,
+            roles: { admin, manager, user },
+            defaultRole: "user",
+        }),
     ],
-    secret: authSecret,
 })
 
 export const handlers = toNextJsHandler(betterAuthInstance)

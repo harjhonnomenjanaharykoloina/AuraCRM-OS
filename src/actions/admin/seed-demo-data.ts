@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { buildFieldDataPayload, deriveRecordName } from "@/lib/field-data";
@@ -20,15 +21,16 @@ import { ensureUserCompanionRecord } from "@/lib/user-companion";
 
 export async function seedDemoData() {
     const session = await auth();
+    const user = getSessionUser(session);
 
-    if (!session?.user || (session.user as any).userType !== "admin") {
+    if (!user || user.userType !== "admin") {
         return { success: false, error: "Unauthorized" };
     }
 
-    const organizationId = parseInt((session.user as any).organizationId);
-    const adminUserId = parseInt((session.user as any).id);
-    const adminEmail = session.user.email ?? "admin@example.com";
-    const adminUsernameRaw = ((session.user as any).username ?? "admin").toString();
+    const organizationId = user.organizationId;
+    const adminUserId = parseInt(user.id);
+    const adminEmail = user.email ?? "admin@example.com";
+    const adminUsernameRaw = (user.username ?? "admin").toString();
 
     const [emailLocalRaw, emailDomainRaw] = adminEmail.split("@");
     const emailLocal = emailLocalRaw || "admin";
@@ -177,14 +179,24 @@ export async function seedDemoData() {
             await ensureUserCompanionRecord(tx, organizationId, jiraQa.id);
             await ensureUserCompanionRecord(tx, organizationId, clinicManager.id);
             await ensureUserCompanionRecord(tx, organizationId, nurse.id);
+            await tx.organizationMember.createMany({
+                data: [
+                    { userId: jiraLead.id, organizationId, role: "org_member", isDefault: false, isActive: true },
+                    { userId: jiraDev.id, organizationId, role: "org_member", isDefault: false, isActive: true },
+                    { userId: jiraQa.id, organizationId, role: "org_member", isDefault: false, isActive: true },
+                    { userId: clinicManager.id, organizationId, role: "org_member", isDefault: false, isActive: true },
+                    { userId: nurse.id, organizationId, role: "org_member", isDefault: false, isActive: true },
+                ],
+                skipDuplicates: true,
+            });
 
             const jiraUsers = [jiraLead.id, jiraDev.id, jiraQa.id];
             const healthUsers = [clinicManager.id, nurse.id];
 
             await tx.queueMember.createMany({
                 data: [
-                    ...jiraUsers.map((userId) => ({ queueId: jiraQueue.id, userId })),
-                    ...healthUsers.map((userId) => ({ queueId: healthQueue.id, userId })),
+                    ...jiraUsers.map((userId) => ({ queueId: jiraQueue.id, userId, organizationId })),
+                    ...healthUsers.map((userId) => ({ queueId: healthQueue.id, userId, organizationId })),
                 ],
             });
 

@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import {
@@ -17,9 +18,10 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function GroupsPage() {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
 
     const groups = await db.group.findMany({
         where: { organizationId },

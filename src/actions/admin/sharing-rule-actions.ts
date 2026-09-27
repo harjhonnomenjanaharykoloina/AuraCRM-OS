@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import {
     removeDependenciesForSource,
@@ -11,22 +11,6 @@ import { MetadataDependencySourceType, ShareAccessLevel } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { enqueueSharingRuleRecompute } from "@/lib/jobs/sharing-rule-jobs";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 const criteriaFilterSchema = z.object({
     fieldDefId: z.number().optional(),
@@ -134,8 +118,7 @@ async function validateCriteriaFields(
 
 export async function createSharingRule(data: z.infer<typeof sharingRuleSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const payload = sharingRuleSchema.parse(data);
 
@@ -195,8 +178,7 @@ export async function createSharingRule(data: z.infer<typeof sharingRuleSchema>)
 
 export async function updateSharingRule(ruleId: number, data: z.infer<typeof sharingRuleSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const payload = sharingRuleSchema.parse(data);
 
@@ -258,8 +240,7 @@ export async function updateSharingRule(ruleId: number, data: z.infer<typeof sha
 
 export async function deleteSharingRule(ruleId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.sharingRule.findUnique({
             where: { id: ruleId },
@@ -287,8 +268,7 @@ export async function deleteSharingRule(ruleId: number) {
 
 export async function toggleSharingRule(ruleId: number, isActive: boolean) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.sharingRule.findUnique({
             where: { id: ruleId },
@@ -316,8 +296,7 @@ export async function toggleSharingRule(ruleId: number, isActive: boolean) {
 
 export async function reorderSharingRules(objectDefId: number, ruleIds: number[]) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rules = await db.sharingRule.findMany({
             where: {

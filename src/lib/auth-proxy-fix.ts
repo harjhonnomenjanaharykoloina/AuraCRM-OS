@@ -1,3 +1,14 @@
+/**
+ * @deprecated Legacy sign-in bridge for migrating bcrypt credential records.
+ * Replaced by Better-Auth's unified session flow (username plugin + email/password).
+ * Scheduled for removal after all users migrate to OTP/OAuth.
+ */
+/**
+ * @deprecated Legacy sign-in bridge for migrating bcrypt credential records.
+ * Replaced by Better-Auth's unified session flow (username plugin + email/password).
+ * Scheduled for removal after all users migrate to OTP/OAuth.
+ */
+
 import bcryptjs from "bcryptjs"
 import { User } from "@prisma/client"
 import { db } from "@/lib/db"

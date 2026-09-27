@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getFieldDisplayValue } from "@/lib/field-data";
 import { OwnerType, PrincipalType, Prisma, ShareAccessLevel } from "@prisma/client";
 import { evaluateCustomLogicExpression } from "@/lib/validation/rule-logic";
+import { logInfo, logError, logDebug } from "@/lib/logger";
 import { getDateTimeTimestamp, getTemporalComparableValue } from "@/lib/temporal";
 
 type RuleCriteriaFilter = {
@@ -162,18 +163,26 @@ export async function recomputeSharingRulesForObject({
     objectDefId,
     batchSize = 500,
 }: RecomputePayload) {
-    const objectDef = await db.objectDefinition.findUnique({
-        where: { id: objectDefId, organizationId },
-        include: { fields: true },
-    });
+    try {
+        const objectDef = await db.objectDefinition.findUnique({
+            where: { id: objectDefId, organizationId },
+            include: { fields: true },
+        });
 
-    if (!objectDef) {
-        throw new Error("Object not found.");
-    }
+        if (!objectDef) {
+            throw new Error("Object not found.");
+        }
 
     const rules = await db.sharingRule.findMany({
         where: { organizationId, objectDefId, isActive: true },
         orderBy: { sortOrder: "asc" },
+    });
+
+    logInfo("Sharing rule recompute started", {
+        objectDefName: objectDef.apiName,
+        objectDefId,
+        organizationId,
+        ruleCount: rules.length,
     });
 
     const deleted = await db.recordShare.deleteMany({
@@ -196,8 +205,10 @@ export async function recomputeSharingRulesForObject({
 
     let inserted = 0;
     let lastId = 0;
+    let batchNumber = 0;
 
     while (true) {
+        batchNumber++;
         const records = await db.record.findMany({
             where: {
                 organizationId,
@@ -223,6 +234,13 @@ export async function recomputeSharingRulesForObject({
         });
 
         if (records.length === 0) break;
+
+        logDebug("Processing batch", {
+            batchNumber,
+            recordsProcessed: records.length,
+            organizationId,
+            objectDefId,
+        });
 
         const shareRows: Prisma.RecordShareCreateManyInput[] = [];
 
@@ -272,5 +290,22 @@ export async function recomputeSharingRulesForObject({
         lastId = records[records.length - 1]?.id ?? lastId;
     }
 
+    logInfo("Sharing rule recompute completed", {
+        organizationId,
+        objectDefId,
+        objectDefName: objectDef.apiName,
+        totalDeleted: deleted.count,
+        totalInserted: inserted,
+    });
+
     return { deleted: deleted.count, inserted };
+    } catch (error) {
+        logError("Sharing rule recompute failed", {
+            organizationId,
+            objectDefId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+        });
+        throw error;
+    }
 }

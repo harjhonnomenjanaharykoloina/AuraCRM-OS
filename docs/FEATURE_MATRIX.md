@@ -2,6 +2,12 @@
 
 **Purpose:** Side-by-side comparison of every feature area between the NextCRM reference implementation (`pdovhomilja/nextcrm-app`) and the openCRM codebase under migration. Each row maps a discrete capability, its status in both projects, and the migration decision that should be applied when aligning openCRM to the NextCRM target.
 
+> **Directory note:** NextCRM uses root-level dirs (`lib/`, `app/`, `prisma/`) — NOT `src/`. openCRM uses `src/` layout. Import paths must be remapped during migration.
+
+> **Auth note:** NextCRM auth modules: `lib/auth.ts`, `lib/auth-permissions.ts`, `lib/auth-server.ts`, `lib/auth-guards.ts`, `lib/authz/session.ts`, `lib/authz/route.ts`, `lib/auth-client.ts`.
+
+> **Multi-tenancy note:** NextCRM has NO tenant model — `Users` has no `organizationId`. openCRM has full multi-tenant isolation. This is the #1 migration challenge.
+
 **Migration Decision Legend**
 | Decision | When to use |
 |----------|-------------|
@@ -19,9 +25,9 @@
 
 | Feature/Module Category | Feature Name | NextCRM Status | OpenCRM Status | Migration Decision | Notes |
 |------------------------|-------------|---------------|---------------|-------------------|-------|
-| Authentication | BetterAuth configuration | Yes | Yes | ADAPT | Both use Better Auth. openCRM needs to align session strategy with NextCRM (admin plugin, access control). |
-| Authentication | Passwordless Email OTP | Yes (6-digit, 5-min expiry, Resend) | No | ADD | openCRM uses bcrypt password auth only. NextCRM makes OTP the primary method. Add `emailOTPClient()` + OTP flow. |
-| Authentication | OAuth (Google) | Yes (socialProviders.google) | No | ADD | openCRM has no OAuth provider configured. Add Google OAuth via BetterAuth social plugin. |
+| Authentication | BetterAuth + NextAuth.js v5 | Yes | Yes | ADAPT | Both use Better Auth; openCRM also bridges with NextAuth.js v5 for OAuth (email OTP, Google OAuth). openCRM needs to align session strategy with NextCRM (admin plugin, access control). |
+| Authentication | Passwordless Email OTP | Yes (6-digit, 5-min expiry, Resend) | Yes (via NextAuth.js v5) | ADAPT | openCRM has email OTP via NextAuth.js v5 bridge. Align with NextCRM's Better-Auth emailOTP plugin for consistency. |
+| Authentication | OAuth (Google) | Yes (socialProviders.google) | Yes (via NextAuth.js v5) | ADAPT | openCRM has Google OAuth via NextAuth.js v5. Consolidate to Better-Auth socialProviders.google for unified auth. |
 | Authentication | Admin plugin / access control | Yes (adminPlugin with `ac`) | No | ADD | NextCRM uses BetterAuth admin plugin with `accessControl`. openCRM uses UserType enum. Replace/enhance with admin plugin. |
 | Authentication | Session management | Yes (7-day expiry, 24h refresh) | Yes (JWT sessions) | KEEP | Both have JWT-based sessions. openCRM already uses `strategy: "jwt"` with `cookieCache`. |
 | Authentication | First-user bootstrap | Yes (auto-promoted to admin + ACTIVE) | Via register() | ADAPT | openCRM's register() creates org + admin user in transaction. NextCRM has explicit `ADMIN_EMAIL` bootstrap. Align to NextCRM pattern. |
@@ -41,7 +47,7 @@
 | Authorization | Ownership columns model | Yes (assigned_to, createdBy, watchers, sharedWith[]) | Yes (ownerId/ownerType USER/QUEUE, RecordShare, Group) | MERGE | NextCRM uses flat ownership columns + watchers junction; openCRM uses Queue/RecordShare/Group model. Merge both approaches. |
 | Authorization | Queue-based assignment | No | Yes (Queue, QueueMember, OwnerType enum) | REPLACE | NextCRM has no queue model. openCRM's queue-based ownership is richer. Adopt into NextCRM target. |
 | Authorization | Group-based sharing | No | Yes (Group, RecordShare with GROUP principal) | REPLACE | NextCRM has `sharedWith[]`; openCRM has Group + RecordShare. Adopt group-based sharing from openCRM. |
-| Authorization | Tenant isolation (multi-org) | No (single-user ownership model, no Organization) | Yes (Organization model, organizationId on all tables) | ADD | NextCRM has NO tenant/organization model — it's a single-instance app. openCRM has full multi-tenant isolation. This is a key openCRM strength to migrate into NextCRM target. |
+| Authorization | Tenant isolation (multi-org) | No (single-user ownership model, no Organization) | Yes (Organization model, organizationId on all tables) | **CRITICAL GAP** | NextCRM has NO tenant/organization model — `Users` has no `organizationId`. openCRM has full multi-tenant isolation (3 layers). **Highest-priority migration challenge.** |
 | Authorization | API token / bearer auth | Yes (nxtc__ prefixed tokens, SHA-256 hashed) | No | ADD | NextCRM has MCP API tokens in `lib/api-tokens.ts`. openCRM has no API tokens (planned Phase 14). Add. |
 | Authorization | Existence leak prevention | Yes (assertScopeOrNotFound → NOT_FOUND) | Yes (getRecord returns NOT_FOUND for inaccessible) | KEEP | Both protect against existence oracle. Equivalent approaches. |
 
@@ -383,6 +389,25 @@
 
 ---
 
+## 21. Critical Gaps
+
+The following table consolidates the critical architectural divergences
+identified in the latest audit. These are **not feature gaps** — they are
+fundamental design paradigm differences that define the migration's highest-risk
+integration points.
+
+| # | Gap | NextCRM (reference) | openCRM (current) | Migration Strategy |
+|---|-----|---------------------|-------------------|--------------------|
+| CG-01 | **No multi-tenancy** | Single-instance. `Users` has no `organizationId`. No `Organization` model. | Full 3-layer multi-tenancy: `Organization` + `User.organizationId` + org-scoped queries + `buildRecordAccessFilter` (org-scoped EXISTS). | **Inject `organizationId` into every NextCRM table.** Update all `lib/authz/scopes/*` helpers with org filter. Every query, test, MCP tool must be org-scoped. Affects ALL phases. |
+| CG-02 | **Auth divergence** | Better-Auth OTP-first (email OTP + Google OAuth, no passwords). Auth modules: `lib/auth.ts`, `lib/auth-permissions.ts`, `lib/auth-server.ts`, `lib/auth-guards.ts`, `lib/authz/session.ts`, `lib/authz/route.ts`, `lib/auth-client.ts`. | Better-Auth 1.7.x + NextAuth.js v5 (bcrypt cost 12, username plugin, email OTP, Google OAuth, JWT sessions). | **Converge in Phase 2.** Preserve multi-method auth. Standardize on Better-Auth admin plugin + `ac` statements. Align auth module file layout. |
+| CG-03 | **EAV vs concrete model** | ~2017-line schema, ~60 typed Prisma models (`crm_Accounts`, `crm_Contacts`, etc.). No EAV. | 1267-line schema, ~47 models. EAV (`Record` + `FieldData`). | **Hybrid model.** EAV for custom objects; typed tables for standard CRM entities. Unified scope helpers across both. |
+| CG-04 | **Root-level dirs** | `lib/`, `app/`, `prisma/` at root — NOT `src/`. | `src/` layout (`src/actions/`, `src/lib/`, `src/app/`). | Import path remapping. Adjust aliases when porting code. |
+
+**See also:** `docs/NEXTCRM_AUDIT.md` §11, `docs/OPENCRM_AUDIT.md` §15,
+`docs/MIGRATION_PLAN.md` §5 for per-repository gap analyses.
+
+---
+
 ## Summary
 
 **Quick reference: Migration decision counts**
@@ -398,4 +423,6 @@
 
 **Migration phases covered:** Phases 1–16 (per `NEXTCRM_SPECIFICATION.md` and `IMPLEMENTATION_ROADMAP.md`) address nearly all ADD/ADAPT/REPLACE decisions. The 16-phase roadmap is the execution plan for closing the gaps identified in this matrix.
 
-*Document generated from static analysis of `NEXTCRM_AUDIT.md`, `OPENCRM_AUDIT.md`, `P0_AUDIT.md`, `UI_AUTH_I18N_AUDIT.md`, `ARCHITECTURE_AUDIT.md`, `NEXTCRM_SPECIFICATION.md`, `MIGRATION_PLAN.md`, and `IMPLEMENTATION_ROADMAP.md`. Last updated: 2026-09-22.*
+*Document generated from static analysis of `NEXTCRM_AUDIT.md`, `OPENCRM_AUDIT.md`, `P0_AUDIT.md`, `UI_AUTH_I18N_AUDIT.md`, `ARCHITECTURE_AUDIT.md`, `NEXTCRM_SPECIFICATION.md`, `MIGRATION_PLAN.md`, and `IMPLEMENTATION_ROADMAP.md`. Last updated: 2026-09-22.
+
+**Key audit findings:** NextCRM is MIT (C) 2023 Pavel Dovhomilja; openCRM is MIT (C) 2026 Ayas A.Hadi. NextCRM has NO multi-tenancy, uses root-level dirs, has ~2017-line schema with ~60 models. openCRM uses EAV (1267 lines, ~47 models) with full multi-tenant isolation. Auth diverges: NextCRM uses Better-Auth OTP-first; openCRM uses Better-Auth + NextAuth.js v5 with bcrypt. These critical gaps are documented in §21.*

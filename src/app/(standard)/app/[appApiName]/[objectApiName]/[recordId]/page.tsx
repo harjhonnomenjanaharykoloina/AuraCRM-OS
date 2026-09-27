@@ -174,7 +174,7 @@ export default async function RecordPage({
         historyEntries = result.historyEntries || [];
         historyLookupLabels = result.historyLookupLabels || {};
 
-        const queueIds = await getUserQueueIds(userId);
+        const queueIds = await getUserQueueIds(userId, organizationId);
         const userGroupId = (await db.user.findUnique({
             where: { id: userId },
             select: { groupId: true },

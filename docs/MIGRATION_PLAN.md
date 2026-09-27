@@ -15,6 +15,16 @@ The platform already has a solid foundation: a two-layer authorization system (R
 
 This migration plan transforms openCRM into **NextCRM** — a complete, production-grade multi-tenant CRM platform incorporating CRM core (Accounts, Contacts, Leads, Opportunities, Activities), Projects & Tasks, Invoicing, Documents & Storage with S3/MinIO backend, a built-in IMAP email client, AI-powered enrichment and semantic search, an MCP server for AI-agent data access, audit logging, automation workflows, and an integration hub with webhooks and API tokens.
 
+**Critical architectural observations from latest audit:**
+
+| # | Observation | Finding | Impact |
+|---|-------------|---------|--------|
+| CG-01 | **No multi-tenancy in NextCRM** | `Users` table has no `organizationId`; no `Organization` model; single-instance app | openCRM's multi-tenant isolation (3 layers: Organization + User.organizationId + org-scoped queries + buildRecordAccessFilter) must be injected into every NextCRM table, query, and scope helper. **Highest-priority migration challenge.** |
+| CG-02 | **Auth divergence** | NextCRM: Better-Auth OTP-first (email OTP + Google OAuth, no passwords). Auth modules: `lib/auth.ts`, `lib/auth-permissions.ts`, `lib/auth-server.ts`, `lib/auth-guards.ts`, `lib/authz/session.ts`, `lib/authz/route.ts`, `lib/auth-client.ts`. openCRM: Better-Auth 1.7.x + NextAuth.js v5 (bcrypt cost 12, username plugin, email OTP, Google OAuth, JWT sessions). | Converge in Phase 2. Preserve openCRM's multi-method approach. Standardize on Better-Auth admin plugin + `ac` statements. Auth module file layout must align. |
+| CG-03 | **EAV vs concrete model** | NextCRM: ~2017-line schema, ~60 typed Prisma models (concrete tables, no EAV). openCRM: 1267-line schema, ~47 models, EAV pattern (`Record` + `FieldData`). | Hybrid persistence: EAV for custom objects, typed tables for standard CRM entities. Unified scope helpers across both. |
+| CG-04 | **Root-level directory structure** | NextCRM: `lib/`, `app/`, `prisma/` at root — NOT `src/`. openCRM: `src/` layout. | Import path remapping required during migration. |
+| CG-05 | **License** | NextCRM: MIT, Copyright (c) 2023 Pavel Dovhomilja. openCRM: MIT, Copyright (c) 2026 Ayas A.Hadi. | Both MIT — no conflict. Both copyright notices must be preserved in distributions. |
+
 The transformation is executed across **16 sequential phases**, each delivering observable product value and leaving the system functional. The architecture splits into two strata: an **Engine** (the universal object engine, auth, permissions, tenant isolation, storage, email, search, AI, MCP, audit logging, background jobs, and observability) that underpins all data operations, and an **Experience** (CRM core modules, projects, invoicing, documents UI, email client, command palette, communication hub, reporting, automation, and admin tooling) that delivers end-user product surface.
 
 **Total estimated effort:** 80–107 person-days across 3 feature teams, scheduled over 8–9 sprints.
@@ -100,7 +110,7 @@ Verified against `ARCHITECTURE_AUDIT.md` (1267-line schema, 3256-line `record-ac
 NextCRM (per `NEXTCRM_AUDIT.md`) provides the complete target product surface:
 
 ### Engine Layer
-- **Authentication**: Better-Auth with email OTP (6-digit, 5-min expiry via Resend), Google OAuth, admin plugin with access control — aligned to openCRM's existing better-auth foundation
+- **Authentication**: BetterAuth + NextAuth.js v5 with email OTP (6-digit, 5-min expiry via Resend), Google OAuth, bcrypt (cost 12), admin plugin with access control (`ac` statements) — aligned to openCRM's existing better-auth foundation
 - **Authorization**: RBAC with 3 roles (admin/manager/user) via Better-Auth `ac` statements + object-level scoping helpers from `lib/authz/scopes/crm.ts`; openCRM's permission set model preserved for fine-grained control
 - **Universal Object Engine**: openCRM's EAV core preserved as the metadata spine for custom objects; standard CRM entities adopt typed Prisma tables
 - **Tenant Isolation**: Enhanced three-layer model (session-derived context → org-scoped queries → org-scoped record access filter) — hardened for multi-org membership
@@ -777,6 +787,29 @@ All feature phases — security hardening applies across the entire stack. Speci
 
 ---
 
+## 5. Critical Gaps (Latest Audit Findings)
+
+The following table consolidates the critical architectural divergences identified
+in the latest audit. These are **not bugs** — they are deliberate design choices
+that define the migration's highest-risk integration points. Every phase must
+explicitly account for these gaps.
+
+| # | Gap | NextCRM (reference) | openCRM (current) | Migration Impact |
+|---|-----|------|------|----------|
+| CG-01 | **No multi-tenancy** | Single-instance. `Users` has no `organizationId`. No `Organization` model. | Full 3-layer multi-tenancy: `Organization` + `User.organizationId` + org-scoped queries + `buildRecordAccessFilter` (org-scoped EXISTS subquery). | **Highest priority.** Must inject `organizationId` into every NextCRM table. Every scope helper in `lib/authz/scopes/*` needs org filtering. Every query, every test, every MCP tool must be org-scoped. Affects ALL phases. |
+| CG-02 | **Auth divergence** | Better-Auth only: email OTP (6-digit, 5-min expiry), Google OAuth, admin plugin with `ac` access control. Auth modules: `lib/auth.ts`, `lib/auth-permissions.ts`, `lib/auth-server.ts`, `lib/auth-guards.ts`, `lib/authz/session.ts`, `lib/authz/route.ts`, `lib/auth-client.ts`. | Better-Auth 1.7.x + NextAuth.js v5: bcrypt (cost 12), username plugin, email OTP, Google OAuth, JWT sessions. | Converge auth model in Phase 2. Preserve multi-method auth. Standardize on Better-Auth admin plugin + `ac` statements. Auth module file layout must align. |
+| CG-03 | **EAV vs concrete model** | ~2017-line schema, ~60 typed Prisma models (concrete tables: `crm_Accounts`, `crm_Contacts`, `crm_Leads`, `crm_Opportunities`, `crm_Contracts`, `crm_Activities`, `crm_Invoices`, `crm_Document_Chunks`, etc.). No `Record`/`FieldData` EAV. | 1267-line schema, ~47 models. EAV pattern: `Organization`, `User`, `PermissionSet`, `ObjectDefinition`, `FieldDefinition`, `Record`, `FieldData`, `RecordShare`. | Hybrid persistence required: EAV for custom objects, typed tables for standard CRM entities. Unified scope helpers must work across both patterns. |
+| CG-04 | **Root-level directory structure** | Root-level `lib/`, `app/`, `prisma/schema.prisma` — NOT `src/`. | `src/` layout (`src/actions/`, `src/lib/`, `src/app/`). | Import path remapping required. openCRM engineers must adjust aliases when porting NextCRM code. |
+| CG-05 | **License & attribution** | MIT License, Copyright (c) 2023 Pavel Dovhomilja. | MIT License, Copyright (c) 2026 Ayas A.Hadi. | Both MIT — no license conflict. Both copyright notices must be preserved in distributions (see `docs/LICENSES.md` §7). |
+
+**Key principle:** These gaps are additive documentation. They do not change
+the 16-phase execution plan — they surface the highest-risk items so each phase
+can explicitly account for them. See `docs/NEXTCRM_AUDIT.md` §11,
+`docs/OPENCRM_AUDIT.md` §15, and `docs/FEATURE_MATRIX.md` §21 for the
+per-repository gap analyses.
+
+---
+
 ## 6. Dependency Graph
 
 ### 6.1 Linear Chain
@@ -1128,7 +1161,7 @@ All new dependencies are permissive-license (MIT/Apache 2.0) — no license conf
 
 | Concern | Key File(s) |
 |---------|-------------|
-| Schema | `prisma/schema.prisma` (~1267 lines, 47 models, 4 migrations) |
+| Schema | `prisma/schema.prisma` (1267 lines, ~47 models, EAV pattern, 4 migrations) |
 | Migration dir | `prisma/migrations/` (4 migrations: init, email_verified, betterauth_columns, soft_delete) |
 | Auth config | `src/auth.ts` (Better-Auth, bcrypt cost 12, JWT, username plugin, admin plugin) |
 | Auth actions | `src/actions/auth.ts` (register, legacySignInAction — cost 12 aligned) |
@@ -1239,6 +1272,7 @@ REDIS_TOKEN=...
 
 Each phase is accepted when all of the following are true:
 
+- [ ] **License compliance:** Both MIT licenses (openCRM (c) 2026 Ayas A.Hadi, NextCRM (c) 2023 Pavel Dovhomilja) preserved in `LICENSE` and `docs/LICENSES.md` §7
 1. **Functional:** All new features work in the standard app and admin area without breaking existing functionality
 2. **Security:** Tenant isolation is preserved; no new privilege-escalation vectors; soft-delete respected in all new read paths
 3. **Tests:** Unit tests cover new Server Actions; security tests cover new authz paths; existing tests still pass

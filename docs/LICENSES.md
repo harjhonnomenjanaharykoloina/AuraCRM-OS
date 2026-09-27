@@ -1,7 +1,7 @@
 # License & Attribution Guide — openCRM
 
 This document records all license and attribution information for the **openCRM**
-project (package name `AuraCRM`), including its own license, the license of the
+project (package name `opencrm`), including its own license, the license of the
 NextCRM reference implementation it is derived from, all third-party dependencies,
 fonts, icons/assets, and the compliance requirements that must be preserved.
 
@@ -21,6 +21,7 @@ fonts, icons/assets, and the compliance requirements that must be preserved.
 | **License** | MIT License |
 | **Copyright holder** | Ayas A.Hadi |
 | **Copyright year** | 2026 |
+| **Package name** | `opencrm` |
 | **License file** | [`LICENSE`](../LICENSE) (repository root) |
 
 **Full license text (repository `LICENSE`):**
@@ -163,6 +164,19 @@ package's `package.json` `license` field and/or `LICENSE` file on disk.
 | Package | Installed version | License | Notes |
 |---------|-------------------|---------|-------|
 | `bcryptjs` | 3.0.3 | BSD-3-Clause | Password hashing |
+| `next-auth` | _(installed)_ | MIT | NextAuth.js v5 — OAuth bridge (Google OAuth, email OTP) |
+| `@auth/core` | _(installed)_ | MIT | NextAuth.js core providers |
+| `imap` | _(planned)_ | MIT | IMAP client for email sync |
+| `mailparser` | _(planned)_ | MIT | Email parsing for IMAP client |
+| `mammoth` | _(planned)_ | MIT | docx text extraction (content extraction) |
+| `pdf-parse` | _(planned)_ | MIT | PDF text extraction |
+| `sharp` | _(planned)_ | Apache-2.0 | Image processing / thumbnails |
+| `react-resizable-panels` | _(planned)_ | MIT | Resizable split-pane layout primitives |
+| `react-doc-viewer` | _(planned)_ | MIT | Document inline viewer |
+| `sanitize-html` | _(planned)_ | MIT | HTML sanitization for rich text |
+| `exceljs` | _(planned)_ | MIT | Excel import/export |
+| `tremor` | _(planned)_ | MIT | Charting library (NextCRM UI) |
+| `mcp-handler` | _(planned)_ | MIT | MCP server framework (NextCRM) |
 
 ### PostgreSQL License
 
@@ -428,11 +442,23 @@ distribution:
 
 ---
 
+## 10. Critical Gaps & License Implications
+
+| # | Gap | License Impact |
+|---|-----|---------------|
+| CG-01 | **No multi-tenancy in NextCRM** (single-instance, no `organizationId` on `Users`) | MIT license is maximally permissive — permits adding tenant isolation. No license conflict. |
+| CG-02 | **Auth divergence** (NextCRM: Better-Auth OTP-first, no passwords; openCRM: bcrypt + NextAuth.js v5 with email OTP + Google OAuth) | Both use MIT-licensed auth libraries (Better-Auth, NextAuth.js, bcryptjs). NextAuth.js is MIT. No license conflict. |
+| CG-03 | **EAV vs concrete model** (openCRM: EAV `Record`/`FieldData`; NextCRM: ~60 typed Prisma tables, ~2017-line schema) | Architectural choice, not license issue. Both MIT. openCRM's EAV design is preserved as a project decision. |
+| CG-04 | **Root-level directory structure** (NextCRM: `lib/`, `app/`, `prisma/` — NOT `src/`) | No license impact — directory structure is organizational, not legal. |
+| CG-05 | **Job runner divergence** (NextCRM: Inngest Apache-2.0; openCRM: pg-boss MIT) | `inngest` is Apache-2.0; `pg-boss` is MIT. Both permissive. No conflict if both coexist. |
+
+---
+
 ## Appendix A: Dependency License Summary
 
 | License | Count (installed) | Packages |
 |---------|-------------------|----------|
-| MIT | ~40+ | Most dependencies (Next.js, React, Better-Auth, Tailwind, Radix, Zod, Sonner, etc.) |
+| MIT | ~55+ | Most dependencies (Next.js, React, Better-Auth, NextAuth.js, Tailwind, Radix, Zod, Sonner, lucide-react, mcp-handler, tremor, sanitize-html, exceljs, imap, mailparser, etc.) |
 | Apache-2.0 | 5 | `prisma`, `@prisma/client`, `@prisma/adapter-pg`, `class-variance-authority`, `openai` (planned) |
 | ISC | 1 | `lucide-react` |
 | BSD-3-Clause | 1 | `bcryptjs` |

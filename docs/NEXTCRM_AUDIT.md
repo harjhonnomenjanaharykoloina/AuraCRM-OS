@@ -6,6 +6,22 @@ capability, and convention to source files so the OpenCRM team can map it onto
 its own existing structure.
 
 ---
+## 0. License
+
+NextCRM is licensed under the **MIT License**.
+
+| Field | Value |
+|-------|-------|
+| **License** | MIT License |
+| **Copyright holder** | Pavel Dovhomilja |
+| **Copyright year** | 2023 |
+| **Project URL** | [`github.com/pdovhomilja/nextcrm-app`](https://github.com/pdovhomilja/nextcrm-app) |
+
+> **Attribution:** When distributing openCRM or a derivative, the NextCRM MIT
+> copyright notice ("Copyright (c) 2023 Pavel Dovhomilja") must be preserved
+> alongside the openCRM copyright notice. See `docs/LICENSES.md` §7 for details.
+
+---
 
 ## 1. Project Overview
 
@@ -13,7 +29,11 @@ NextCRM is an open-source, full-stack CRM SaaS built on the Next.js 16 App Route
 It bundles CRM, project management, invoicing, document storage, a built-in
 email client (IMAP/SMTP), AI-powered enrichment/vector search, a Model Context
 Protocol (MCP) server for AI-agent data access, audit logging, background jobs,
-campaign management, and internationalization. It is deployable via Docker Compose
+campaign management, and internationalization. **Directory structure:** Uses root-level directories (`lib/`, `app/`,
+`prisma/schema.prisma`) — NOT `src/`. This is a key divergence from openCRM's
+`src/` layout.
+
+It is deployable via Docker Compose
 (bundled Postgres + MinIO + Inngest) or self-hosted on Vercel/Cloud.
 
 ### Stack
@@ -27,6 +47,7 @@ campaign management, and internationalization. It is deployable via Docker Compo
 | Database           | PostgreSQL 17+ (with **pgvector** extension)                              |
 | ORM                | Prisma 7.6 (`@prisma/adapter-pg`, native `pg` pool)                       |
 | Auth               | Better Auth 1.6.x (email OTP + Google OAuth + admin plugin)               |
+| Multi-tenancy       | **None** — single-instance app; `Users` have no `organizationId`      |
 | Authz              | Custom RBAC (3 roles) + per-object scope helpers in `lib/authz/`          |
 | UI                 | React 19, Tailwind CSS v4, shadcn/ui, Radix UI, Lucide, Tremor, PrimeReact|
 | i18n               | next-intl (en, cz, de, uk), locale-based routing                           |
@@ -297,6 +318,16 @@ Global state uses **Jotai** (`jotai@^2.18`) for cross-component state.
 | Dev OTP capture      | `testUtils({ captureOTP: true })` plugin in non-production; `/api/auth/test-otp` retrieves it (404 in prod) |
 | Email delivery       | Resend (via `lib/resend.ts`); falls back to DB key if env not set      |
 
+
+**Auth module files:**
+- `lib/auth.ts` — Better-Auth configuration
+- `lib/auth-permissions.ts` — RBAC permission statements + roles
+- `lib/auth-server.ts` — `getSession()` server-side session helper
+- `lib/auth-guards.ts` — `requireOwnerOrAdmin`, `requireAdmin` guards
+- `lib/authz/session.ts` — `requireAuthenticated()`, `requireRole()`, `isAdmin()`, `isManagerOrAdmin()`
+- `lib/authz/route.ts` — Response helpers: `unauthorizedResponse`, `forbiddenResponse`, `notFoundOrForbiddenResponse`
+- `lib/auth-client.ts` — React client with `emailOTPClient()` + `adminClient()`
+
 **Source:** `lib/auth.ts:1` — `betterAuth({...})` config; `lib/auth-client.ts` — React client with `emailOTPClient()` + `adminClient()`; `app/api/auth/[...all]/route.ts` — `toNextJsHandler(auth)`; `app/[locale]/(auth)/sign-in/components/LoginComponent.tsx` — two-step email→OTP + Google OAuth UI.
 
 ### 4.2 Authorization (RBAC + Object-level Scoping)
@@ -379,7 +410,9 @@ Admin panel: `/admin/llm-keys` sets system-wide encrypted keys. Profile: `/profi
 
 ## 5. Database Schema Overview
 
-PostgreSQL 17+ with the **pgvector** extension. Prisma schema at `prisma/schema.prisma`.
+PostgreSQL 17+ with the **pgvector** extension. Prisma schema at `prisma/schema.prisma` (~2017 lines, ~60 models including
+`crm_Accounts`, `crm_Contacts`, `crm_Leads`, `crm_Opportunities`, `crm_Contracts`,
+`crm_Activities`, `crm_Invoices`, `crm_Document_Chunks`, etc.).
 Models use explicit `@@index` annotations extensively (by `createdAt`, `deletedAt`, `assigned_to`, `status`, etc.).
 
 ### 5.1 Auth / System Models
@@ -1051,6 +1084,22 @@ This section cross-references NextCRM modules to likely OpenCRM counterparts to 
 | MCP server                          | `mcp-handler`                               | 127 tools, Bearer auth, streamable HTTP + SSE       |
 | Invoicing (new)                     | `Invoices`, `Invoice_*`                     | Multi-currency, tax, series, PDF, payments          |
 | Campaigns (new)                     | `crm_campaigns*`                            | Multi-step, templates, targeting, tracking          |
+
+---
+
+## 11. Critical Gaps vs. openCRM
+
+The following gaps represent fundamental architectural divergences between
+NextCRM (single-instance, typed-table design) and openCRM (multi-tenant, EAV
+design). These are **not bugs** — they are deliberate design choices that define
+the migration's highest-risk integration points:
+
+| # | Gap | NextCRM (reference) | openCRM (current) | Migration Impact |
+|---|-----|---------------------|-------------------|------------------|
+| CG-01 | **No multi-tenancy** | Single-instance app. `Users` table has **no `organizationId`**. No `Organization` model. | Full 3-layer multi-tenancy: `Organization` + `User.organizationId` + org-scoped queries + `buildRecordAccessFilter` (org-scoped EXISTS subquery). | **Highest priority.** Must inject `organizationId` into every NextCRM table. Every scope helper in `lib/authz/scopes/*` needs org filtering. Every query, every test, every MCP tool must be org-scoped. Affects ALL phases. |
+| CG-02 | **Auth divergence** | Better-Auth only: email OTP (6-digit, 5-min expiry), Google OAuth, admin plugin with `ac` access control. No password auth. | Better-Auth 1.7.x + NextAuth.js v5: bcrypt (cost 12), username plugin, email OTP, Google OAuth via NextAuth.js bridge, JWT sessions. | Converge auth model. Preserve openCRM's multi-method approach. Standardize on Better-Auth admin plugin + `ac` statements for RBAC. Auth module file layout must align. |
+| CG-03 | **EAV vs concrete model** | ~2017-line schema, ~60 typed Prisma models with concrete tables (`crm_Accounts`, `crm_Contacts`, etc.). No `Record`/`FieldData` EAV. | 1267-line schema, ~47 models. EAV pattern: `Organization`, `User`, `PermissionSet`, `ObjectDefinition`, `FieldDefinition`, `Record`, `FieldData`, `RecordShare`. | Hybrid persistence required: EAV for custom objects, typed tables for standard CRM entities. Unified scope helpers must work across both patterns. |
+| CG-04 | **Root-level directory structure** | Uses `lib/`, `app/`, `prisma/` at root — NOT `src/`. | Uses `src/` layout (`src/actions/`, `src/lib/`, `src/app/`). | Import path remapping required. openCRM engineers must adjust aliases when porting NextCRM code. |
 
 ---
 

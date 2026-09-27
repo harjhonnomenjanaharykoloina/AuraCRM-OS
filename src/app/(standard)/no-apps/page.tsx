@@ -7,18 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getAvailableApps } from "@/lib/permissions";
 import { getMessages, getT } from "@/i18n/server";
+import { getSessionUser } from "@/lib/auth/types";
 
 export default async function NoAppsPage() {
     const session = await auth();
-    if (!session?.user) redirect("/login");
+    const user = getSessionUser(session);
+    if (!user) redirect("/login");
 
-    const user = session.user as any;
     const isAdmin = user.userType === "admin";
 
     const messages = await getMessages();
     const t = await getT(messages);
 
-    const availableApps = await getAvailableApps(parseInt(user.id), parseInt(user.organizationId), user.userType);
+    const availableApps = await getAvailableApps(parseInt(user.id), user.organizationId, user.userType);
     if (availableApps.length > 0) {
         redirect(`/app/${availableApps[0].apiName}`);
     }

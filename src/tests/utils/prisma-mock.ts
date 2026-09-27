@@ -4,6 +4,12 @@ export const mockDb = {
     permissionSetAssignment: {
         findMany: vi.fn(),
     },
+    permissionSetGroupAssignment: {
+        findMany: vi.fn(),
+    },
+    permissionSetGroupMember: {
+        findMany: vi.fn(),
+    },
     objectPermission: {
         findMany: vi.fn(),
     },

@@ -30,6 +30,7 @@ vi.mock("@/lib/permissions", () => ({
 }));
 vi.mock("@/lib/record-access", () => ({
     getUserQueueIds: vi.fn().mockResolvedValue([]),
+    getUserAccessContext: vi.fn().mockResolvedValue({ userId: 1, organizationId: 1, queueIds: [], userGroupId: null, permissionSetIds: [] }),
     buildRecordAccessFilter: vi.fn().mockReturnValue({}),
 }));
 vi.mock("@/lib/duplicates/duplicate-rules", () => ({

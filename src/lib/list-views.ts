@@ -23,10 +23,29 @@ async function getListViewAccessContext(
         },
     });
 
-    const permissionSets = await db.permissionSetAssignment.findMany({
-        where: { userId },
-        select: { permissionSetId: true },
-    });
+    const [directAssignments, groupAssignments] = await Promise.all([
+        db.permissionSetAssignment.findMany({
+            where: { userId },
+            select: { permissionSetId: true },
+        }),
+        db.permissionSetGroupAssignment.findMany({
+            where: { userId },
+            select: { permissionSetGroupId: true },
+        }),
+    ]);
+
+    const permissionSetIds = new Set(directAssignments.map((a) => a.permissionSetId));
+
+    const groupIds = [...new Set(groupAssignments.map((a) => a.permissionSetGroupId))];
+    if (groupIds.length > 0) {
+        const groupMembers = await db.permissionSetGroupMember.findMany({
+            where: { permissionSetGroupId: { in: groupIds } },
+            select: { permissionSetId: true },
+        });
+        for (const member of groupMembers) {
+            permissionSetIds.add(member.permissionSetId);
+        }
+    }
 
     return {
         organizationId,
@@ -34,7 +53,7 @@ async function getListViewAccessContext(
         userId,
         userType: user?.userType ?? "standard",
         groupId: user?.groupId ?? null,
-        permissionSetIds: permissionSets.map((set) => set.permissionSetId),
+        permissionSetIds: Array.from(permissionSetIds),
     };
 }
 

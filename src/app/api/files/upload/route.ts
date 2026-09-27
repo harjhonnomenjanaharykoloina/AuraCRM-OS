@@ -4,13 +4,9 @@ import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
 import { checkRateLimit, tooManyRequestsResponse, uploadRateLimiter } from "@/lib/api-rate-limit";
-import {
-    buildAttachmentStoragePath,
-    deleteFileSafe,
-    ensureParentDir,
-    resolveStoragePath,
-} from "@/lib/file-storage";
-import { promises as fs } from "fs";
+import { getSessionUser } from "@/lib/auth/types";
+import { buildAttachmentStoragePath } from "@/lib/file-storage";
+import { getStorageProvider } from "@/lib/storage/factory";
 import path from "path";
 
 export const runtime = "nodejs";
@@ -85,13 +81,13 @@ function isAllowedMime(allowedTypes: string, mimeType: string) {
 export async function POST(request: Request) {
     try {
         const session = await auth();
-        if (!session?.user) {
+        const user = getSessionUser(session);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = session.user as any;
         const userId = parseInt(user.id);
-        const organizationId = parseInt(user.organizationId);
+        const organizationId = user.organizationId;
 
         if (Number.isNaN(userId) || Number.isNaN(organizationId)) {
             return NextResponse.json({ error: "Invalid session" }, { status: 400 });
@@ -147,7 +143,7 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Forbidden" }, { status: 403 });
             }
 
-            const queueIds = await getUserQueueIds(userId);
+            const queueIds = await getUserQueueIds(userId, organizationId);
             const userGroupId = (await db.user.findUnique({
                 where: { id: userId },
                 select: { groupId: true },
@@ -205,9 +201,7 @@ export async function POST(request: Request) {
                     fieldDefId,
                     attachmentId: existing.id,
                 }).relativePath;
-            const absolutePath = resolveStoragePath(storagePath);
-            await ensureParentDir(absolutePath);
-            await fs.writeFile(absolutePath, buffer);
+            await getStorageProvider().save(storagePath, buffer, detectedMime);
 
             await fileAttachmentDelegate.update({
                 where: { id: existing.id },
@@ -217,6 +211,7 @@ export async function POST(request: Request) {
                     mimeType: detectedMime,
                     size: fileBlob.size,
                     storagePath,
+                    storageProvider: getStorageProvider().name,
                     createdById: userId,
                 },
             });
@@ -244,11 +239,12 @@ export async function POST(request: Request) {
                 mimeType: detectedMime,
                 size: fileBlob.size,
                 storagePath: "",
+                storageProvider: getStorageProvider().name,
                 createdById: userId,
             },
         });
 
-        const { relativePath, absolutePath } = buildAttachmentStoragePath({
+        const { relativePath } = buildAttachmentStoragePath({
             organizationId,
             recordId,
             fieldDefId,
@@ -256,14 +252,13 @@ export async function POST(request: Request) {
         });
 
         try {
-            await ensureParentDir(absolutePath);
-            await fs.writeFile(absolutePath, buffer);
+            await getStorageProvider().save(relativePath, buffer, detectedMime);
             await fileAttachmentDelegate.update({
                 where: { id: created.id },
-                data: { storagePath: relativePath },
+                data: { storagePath: relativePath, storageProvider: getStorageProvider().name },
             });
         } catch (error) {
-            await deleteFileSafe(absolutePath);
+            await getStorageProvider().delete(relativePath);
             await fileAttachmentDelegate.delete({ where: { id: created.id } });
             throw error;
         }

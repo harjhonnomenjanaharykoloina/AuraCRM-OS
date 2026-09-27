@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
@@ -14,9 +15,10 @@ export default async function DuplicateRuleCreatePage({
     params: Promise<{ objectId: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
     const { objectId } = await params;
     const objectDefId = parseInt(objectId, 10);
 

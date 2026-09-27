@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { db } from "@/lib/db";
 import { getT } from "@/i18n/server";
 import Link from "next/link";
@@ -15,9 +16,10 @@ import { Eye, Layers, ShieldCheck, Share2 } from "lucide-react";
 
 export default async function SharingRulesPage() {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
 
     const objects = await db.objectDefinition.findMany({
         where: { organizationId },

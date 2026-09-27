@@ -78,6 +78,7 @@ vi.mock("@/lib/record-access", async (importOriginal) => {
     return {
         ...actual,
         getUserQueueIds: vi.fn().mockResolvedValue([]),
+        getUserAccessContext: vi.fn().mockResolvedValue({ userId: 1, organizationId: 1, queueIds: [], userGroupId: null, permissionSetIds: [] }),
     };
 });
 vi.mock("@/lib/duplicates/duplicate-rules", () => ({

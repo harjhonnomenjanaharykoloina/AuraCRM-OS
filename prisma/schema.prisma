@@ -112,6 +112,7 @@ model Organization {
   updatedAt   DateTime @updatedAt
 
   users             User[]
+  organizationMembers OrganizationMember[]
   records           Record[]
   apps              AppDefinition[]
   permissionSets    PermissionSet[]
@@ -139,6 +140,53 @@ model Organization {
   metadataDependencies MetadataDependency[]
 
   @@index([ownerId])
+  boards Boards[]
+  sections Sections[]
+  tasks Tasks[]
+  tasksComments tasksComments[]
+  boardWatchers BoardWatchers[]
+  todoLists TodoList[]
+  employees Employees[]
+  imageUploads ImageUpload[]
+  documents Documents[]
+  documents_Types Documents_Types[]
+  documentsToOpportunities DocumentsToOpportunities[]
+  documentsToContacts DocumentsToContacts[]
+  documentsToTasks DocumentsToTasks[]
+  documentsToCrmAccountsTasks DocumentsToCrmAccountsTasks[]
+  documentsToLeads DocumentsToLeads[]
+  documentsToAccounts DocumentsToAccounts[]
+  accountWatchers AccountWatchers[]
+  invoices Invoices[]
+  invoice_LineItems Invoice_LineItems[]
+  invoice_Payments Invoice_Payments[]
+  invoice_Attachments Invoice_Attachments[]
+  invoice_Activitys Invoice_Activity[]
+  invoice_TaxRates Invoice_TaxRates[]
+  invoice_Series Invoice_Series[]
+  invoice_Settings Invoice_Settings[]
+  currencys Currency[]
+  exchangeRates ExchangeRate[]
+  emailAccounts EmailAccount[]
+  emails Email[]
+  emailTemplates EmailTemplate[]
+  emailEmbeddings EmailEmbedding[]
+  emailsToContacts EmailsToContacts[]
+  emailsToAccounts EmailsToAccounts[]
+  calendarConnections CalendarConnection[]
+  crm_CalendarEvents crm_CalendarEvents[]
+  apiTokens ApiToken[]
+  apiKeys ApiKeys[]
+  systemServices systemServices[]
+  crm_AuditLogs crm_AuditLog[]
+  crm_Report_Configs crm_Report_Config[]
+  crm_Report_Schedules crm_Report_Schedule[]
+  crm_SystemSettings crm_SystemSettings[]
+  crm_ActivityLinks crm_ActivityLinks[]
+  crm_Activities crm_Activities[]
+  crm_Embeddings_Documents crm_Embeddings_Documents[]
+  crm_Document_Chunks crm_Document_Chunks[]
+  crm_Accounts_Tasks crm_Accounts_Tasks[]
 }
 
 // ============================================================================
@@ -152,14 +200,19 @@ model User {
   username      String    @unique
   password      String?
   emailVerified Boolean  @default(false)
+  banned         Boolean   @default(false)
+  banReason      String?
+  banExpires     DateTime?
   image         String?
   
   // User Type: "admin", "standard"
   userType      UserType  @default(admin)
+  role          String    @default("user")
   
   organizationId Int
   organization   Organization @relation(fields: [organizationId], references: [id])
   ownedOrganizations Organization[] @relation("OrganizationOwner")
+  organizationMembers OrganizationMember[]
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -203,6 +256,28 @@ model User {
   @@index([groupId])
   @@index([username])
   @@unique([organizationId, email])
+  assigned_userBoards Boards[] @relation("assigned_user")
+  created_byDocuments Documents[] @relation("created_by_user")
+  assigned_to_userDocuments Documents[] @relation("assigned_to_user")
+  createdByUserInvoices Invoices[] @relation("InvoiceCreatedBy")
+  createdByUserInvoice_Payments Invoice_Payments[] @relation("InvoicePaymentCreatedBy")
+  uploadedByUserInvoice_Attachments Invoice_Attachments[] @relation("InvoiceAttachmentUploadedBy")
+  actorInvoice_Activity Invoice_Activity[] @relation("InvoiceActivityActor")
+  usercrm_Report_Config crm_Report_Config[] @relation("report_configs")
+  usercrm_Report_Schedule crm_Report_Schedule[] @relation("report_schedules")
+  created_by_usercrm_Activities crm_Activities[] @relation("activity_created_by")
+  updated_by_usercrm_Activities crm_Activities[] @relation("activity_updated_by")
+  tasks Tasks[]
+  tasksComments tasksComments[]
+  boardWatchers BoardWatchers[]
+  accountWatchers AccountWatchers[]
+  emailAccounts EmailAccount[]
+  emails Email[]
+  calendarConnections CalendarConnection[]
+  apiTokens ApiToken[]
+  apiKeys ApiKeys[]
+  crm_AuditLogs crm_AuditLog[]
+  crm_Accounts_Tasks crm_Accounts_Tasks[]
 }
 
 // ============================================================================
@@ -424,16 +499,18 @@ model Queue {
 }
 
 model QueueMember {
-  id        Int   @id @default(autoincrement())
-  queueId   Int
-  queue     Queue  @relation(fields: [queueId], references: [id])
-  userId    Int
-  user      User  @relation(fields: [userId], references: [id])
+  id             Int   @id @default(autoincrement())
+  queueId        Int
+  queue          Queue  @relation(fields: [queueId], references: [id])
+  userId         Int
+  user           User  @relation(fields: [userId], references: [id])
+  organizationId Int
 
   createdAt DateTime @default(now())
 
   @@unique([queueId, userId])
   @@index([userId])
+  @@index([organizationId])
 }
 
 model Group {
@@ -668,6 +745,10 @@ model Record {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  searchVector   String? // Phase 9: full-text search vector (app-managed tsvector)
+
+  aiSummary          String?
+  aiSummaryUpdatedAt DateTime?
 
   @@index([organizationId, objectDefId, createdAt])
   @@index([organizationId, objectDefId, ownerId])
@@ -753,6 +834,7 @@ model FileAttachment {
   mimeType       String
   size           Int
   storagePath    String
+  storageProvider String @default("local")
 
   createdById    Int
   createdBy      User     @relation(fields: [createdById], references: [id])
@@ -1230,9 +1312,10 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  impersonatedBy String?
   ipAddress String?
   userAgent String?
-  organizationId String?
+  organizationId Int?
 }
 
 model Account {
@@ -1264,4 +1347,1164 @@ model Verification {
   updatedAt    DateTime @updatedAt
 
   @@index([identifier])
+}
+
+
+
+// ============================================================================
+// NextCRM Integration — Typed Table Models
+// Auto-merged from NextCRM schema with organizationId injection
+// ============================================================================
+
+// --- Enums ---
+enum taskStatus {
+  ACTIVE
+  PENDING
+  COMPLETE
+}
+enum DocumentSystemType {
+  RECEIPT
+  CONTRACT
+  OFFER
+  OTHER
+}
+enum DocumentProcessingStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+enum Invoice_Status {
+  DRAFT
+  ISSUED
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+  DISPUTED
+  REFUNDED
+  WRITTEN_OFF
+}
+enum Invoice_Type {
+  INVOICE
+  CREDIT_NOTE
+  PROFORMA
+}
+enum ExchangeRateSource {
+  MANUAL
+  ECB
+}
+enum EmailFolder {
+  INBOX
+  SENT
+}
+enum crm_Activity_Type {
+  call
+  meeting
+  note
+  email
+}
+enum crm_Activity_Status {
+  scheduled
+  completed
+  cancelled
+}
+enum crm_Contracts_Status {
+  NOTSTARTED
+  INPROGRESS
+  SIGNED
+}
+enum crm_AuditLog_Action {
+  created
+  updated
+  deleted
+  restored
+  relation_added
+  relation_removed
+}
+enum crm_Product_Type {
+  PRODUCT
+  SERVICE
+}
+enum crm_Product_Status {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+enum crm_Billing_Period {
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+  ONE_TIME
+}
+enum crm_AccountProduct_Status {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+enum crm_Discount_Type {
+  PERCENTAGE
+  FIXED
+}
+enum CalendarProvider {
+  google
+}
+enum ApiKeyScope {
+  SYSTEM
+  USER
+}
+enum ApiKeyProvider {
+  OPENAI
+  FIRECRAWL
+  ANTHROPIC
+  GROQ
+}
+
+model Boards {
+  id                String    @id @default(uuid()) @db.Uuid
+  v                 Int       @map("__v")
+  description       String
+  favourite         Boolean?
+  favouritePosition BigInt?
+  icon              String?
+  position          BigInt?
+  title             String
+  user Int
+  visibility        String?
+  sharedWith        String[]  @db.Uuid
+  createdAt         DateTime? @default(now())
+  createdBy         String?   @db.Uuid
+  updatedAt         DateTime? @updatedAt
+  updatedBy         String?   @db.Uuid
+  deletedAt         DateTime?
+  deletedBy         String?   @db.Uuid
+
+  assigned_user User?          @relation("assigned_user", fields: [user], references: [id])
+  sections      Sections[]
+  watchers      BoardWatchers[]
+
+  @@index([user])
+  @@index([createdBy])
+  @@index([updatedBy])
+  @@index([favourite])
+  @@index([visibility])
+  @@index([createdAt])
+  @@index([user, favourite])
+  @@index([deletedAt])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Sections {
+  id       String  @id @default(uuid()) @db.Uuid
+  v        Int     @map("__v")
+  board    String  @db.Uuid
+  title    String
+  position BigInt?
+  tasks    Tasks[]
+
+  board_relation Boards? @relation(fields: [board], references: [id])
+
+  @@index([board])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Tasks {
+  id           String      @id @default(uuid()) @db.Uuid
+  v            Int         @map("__v")
+  content      String?
+  createdAt    DateTime?   @default(now())
+  createdBy    String?     @db.Uuid
+  updatedAt    DateTime?   @updatedAt
+  updatedBy    String?     @db.Uuid
+  dueDateAt    DateTime?   @default(now())
+  lastEditedAt DateTime?   @default(now()) @updatedAt
+  position     BigInt
+  priority     String
+  section      String?     @db.Uuid
+  tags         Json?       @db.JsonB
+  title        String
+  likes        BigInt?     @default(0)
+  user Int?
+  taskStatus   taskStatus? @default(ACTIVE)
+
+  comments         tasksComments[]
+  assigned_user    User?             @relation(fields: [user], references: [id])
+  assigned_section Sections?          @relation(fields: [section], references: [id])
+  documents        DocumentsToTasks[]
+
+  @@index([user])
+  @@index([section])
+  @@index([createdBy])
+  @@index([updatedBy])
+  @@index([priority])
+  @@index([taskStatus])
+  @@index([dueDateAt])
+  @@index([createdAt])
+  @@index([user, taskStatus])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model tasksComments {
+  id                        String   @id @default(uuid()) @db.Uuid
+  v                         Int      @map("__v")
+  comment                   String
+  createdAt                 DateTime @default(now())
+  task                      String?  @db.Uuid
+  user Int
+  assigned_crm_account_task String?  @db.Uuid
+
+  assigned_crm_account_task_task crm_Accounts_Tasks? @relation(fields: [assigned_crm_account_task], references: [id])
+  assigned_task                  Tasks?              @relation(fields: [task], references: [id], onDelete: Cascade)
+  assigned_user                  User?              @relation(fields: [user], references: [id])
+
+  @@index([task])
+  @@index([user])
+  @@index([assigned_crm_account_task])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model BoardWatchers {
+  board_id String @db.Uuid
+  user_id Int
+
+  board Boards @relation(fields: [board_id], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([board_id, user_id])
+  @@index([board_id])
+  @@index([user_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model TodoList {
+  id          String @id @default(uuid()) @db.Uuid
+  createdAt   String
+  description String
+  title       String
+  url         String
+  user        String
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Employees {
+  id     String  @id @default(uuid()) @db.Uuid
+  v      Int     @map("__v")
+  avatar String
+  email  String?
+  name   String
+  salary BigInt
+  status String
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model ImageUpload {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Documents {
+  id                     String    @id @default(uuid()) @db.Uuid
+  v                      Int?      @map("__v")
+  date_created           DateTime? @default(now())
+  createdAt              DateTime? @default(now())
+  last_updated           DateTime? @updatedAt
+  updatedAt              DateTime? @updatedAt
+  document_name          String
+  created_by_user Int?
+  createdBy              String?   @db.Uuid
+  description            String?
+  document_type          String?   @db.Uuid
+  favourite              Boolean?
+  document_file_mimeType String
+  document_file_url      String
+  status                 String?
+  visibility             String?
+  tags                   Json?     @db.JsonB
+  key                    String?
+  size                   Int?
+  assigned_user Int?
+  connected_documents    String[]
+
+  // --- New enrichment fields ---
+  content_text       String?
+  summary            String?
+  content_hash       String?
+  thumbnail_url      String?
+  processing_status  DocumentProcessingStatus @default(PENDING)
+  processing_error   String?
+  version            Int                      @default(1)
+  parent_document_id String?                  @db.Uuid
+  deletedAt          DateTime?
+  deletedBy          String?                  @db.Uuid
+
+  created_by           User?                        @relation("created_by_user", fields: [created_by_user], references: [id])
+  assigned_to_user     User?                        @relation("assigned_to_user", fields: [assigned_user], references: [id])
+  documents_type       Documents_Types?              @relation(fields: [document_type], references: [id])
+  document_system_type DocumentSystemType?           @default(OTHER)
+  opportunities        DocumentsToOpportunities[]
+  contacts             DocumentsToContacts[]
+  tasks                DocumentsToTasks[]
+  crm_accounts_tasks   DocumentsToCrmAccountsTasks[]
+  leads                DocumentsToLeads[]
+  accounts             DocumentsToAccounts[]
+  parent_document      Documents?                    @relation("DocumentVersions", fields: [parent_document_id], references: [id])
+  child_versions       Documents[]                   @relation("DocumentVersions")
+  chunks               crm_Document_Chunks[]
+  embedding_record     crm_Embeddings_Documents?
+
+  @@index([created_by_user])
+  @@index([assigned_user])
+  @@index([document_type])
+  @@index([createdBy])
+  @@index([status])
+  @@index([visibility])
+  @@index([favourite])
+  @@index([createdAt])
+  @@index([document_system_type])
+  @@index([content_hash])
+  @@index([parent_document_id])
+  @@index([processing_status])
+  @@index([deletedAt])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Documents_Types {
+  id                 String      @id @default(uuid()) @db.Uuid
+  v                  Int         @map("__v")
+  name               String
+  assigned_documents Documents[]
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model DocumentsToOpportunities {
+  document_id    String @db.Uuid
+  opportunity_id String
+
+  document    Documents         @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, opportunity_id])
+  @@index([document_id])
+  @@index([opportunity_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model DocumentsToContacts {
+  document_id String @db.Uuid
+  contact_id String
+
+  document Documents    @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, contact_id])
+  @@index([document_id])
+  @@index([contact_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model DocumentsToTasks {
+  document_id String @db.Uuid
+  task_id     String @db.Uuid
+
+  document Documents @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  task     Tasks     @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, task_id])
+  @@index([document_id])
+  @@index([task_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model DocumentsToCrmAccountsTasks {
+  document_id          String @db.Uuid
+  crm_accounts_task_id String @db.Uuid
+
+  document          Documents          @relation(fields: [document_id], references: [id], onDelete: Cascade)
+  crm_accounts_task crm_Accounts_Tasks @relation(fields: [crm_accounts_task_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, crm_accounts_task_id])
+  @@index([document_id])
+  @@index([crm_accounts_task_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model DocumentsToLeads {
+  document_id String @db.Uuid
+  lead_id String
+
+  document Documents @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, lead_id])
+  @@index([document_id])
+  @@index([lead_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model DocumentsToAccounts {
+  document_id String @db.Uuid
+  account_id String
+
+  document Documents    @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@id([document_id, account_id])
+  @@index([document_id])
+  @@index([account_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model AccountWatchers {
+  account_id String
+  user_id Int
+
+  user    User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@id([account_id, user_id])
+  @@index([account_id])
+  @@index([user_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoices {
+  id                    String           @id @default(uuid()) @db.Uuid
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  createdBy Int
+  createdByUser         User            @relation("InvoiceCreatedBy", fields: [createdBy], references: [id])
+
+  type                  Invoice_Type     @default(INVOICE)
+  status                Invoice_Status   @default(DRAFT)
+
+  number                String?
+  numberOverridden      Boolean          @default(false)
+  seriesId              String?          @db.Uuid
+  series                Invoice_Series?  @relation(fields: [seriesId], references: [id])
+
+  accountId String
+  billingSnapshot       Json?
+
+  issueDate             DateTime?
+  taxableSupplyDate     DateTime?
+  dueDate               DateTime?
+
+  currency              String           @db.VarChar(3)
+  currencyRef           Currency         @relation("InvoiceCurrency", fields: [currency], references: [code], onDelete: Restrict)
+  baseCurrency          String?          @db.VarChar(3)
+  fxRateToBase          Decimal?         @db.Decimal(18, 8)
+
+  subtotal              Decimal          @default(0) @db.Decimal(14, 2)
+  discountTotal         Decimal          @default(0) @db.Decimal(14, 2)
+  vatTotal              Decimal          @default(0) @db.Decimal(14, 2)
+  grandTotal            Decimal          @default(0) @db.Decimal(14, 2)
+  paidTotal             Decimal          @default(0) @db.Decimal(14, 2)
+  balanceDue            Decimal          @default(0) @db.Decimal(14, 2)
+
+  bankName              String?
+  bankAccount           String?
+  iban                  String?
+  swift                 String?
+  variableSymbol        String?
+
+  publicNotes           String?
+  internalNotes         String?
+
+  originalInvoiceId     String?          @db.Uuid
+  originalInvoice       Invoices?        @relation("CreditNoteOf", fields: [originalInvoiceId], references: [id])
+  creditNotes           Invoices[]       @relation("CreditNoteOf")
+
+  pdfStorageKey         String?
+  pdfGeneratedAt        DateTime?
+
+  searchVector          Unsupported("tsvector")?  @map("search_vector")
+
+  lineItems             Invoice_LineItems[]
+  payments              Invoice_Payments[]
+  activity              Invoice_Activity[]
+  attachments           Invoice_Attachments[]
+
+  @@unique([seriesId, number])
+  @@index([accountId])
+  @@index([status])
+  @@index([issueDate])
+  @@index([dueDate])
+  @@index([createdBy])
+  @@index([originalInvoiceId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_LineItems {
+  id              String     @id @default(uuid()) @db.Uuid
+  invoiceId       String     @db.Uuid
+  invoice         Invoices   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  position        Int
+  productId String?
+  description     String
+  quantity        Decimal    @db.Decimal(14, 4)
+  unitPrice       Decimal    @db.Decimal(14, 4)
+  discountPercent Decimal    @default(0) @db.Decimal(5, 2)
+  taxRateId       String?    @db.Uuid
+  taxRate         Invoice_TaxRates? @relation(fields: [taxRateId], references: [id])
+  taxRateSnapshot Decimal?   @db.Decimal(5, 2)
+  lineSubtotal    Decimal    @db.Decimal(14, 2)
+  lineVat         Decimal    @db.Decimal(14, 2)
+  lineTotal       Decimal    @db.Decimal(14, 2)
+
+  @@index([invoiceId])
+  @@index([productId])
+  @@index([taxRateId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_Payments {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @db.Uuid
+  invoice     Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paidAt      DateTime
+  amount      Decimal  @db.Decimal(14, 2)
+  method      String?
+  reference   String?
+  note        String?
+  createdBy Int
+  createdByUser User  @relation("InvoicePaymentCreatedBy", fields: [createdBy], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_Attachments {
+  id              String   @id @default(uuid()) @db.Uuid
+  invoiceId       String   @db.Uuid
+  invoice         Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  storageKey      String
+  filename        String
+  mimeType        String
+  size            Int
+  uploadedBy Int
+  uploadedByUser  User    @relation("InvoiceAttachmentUploadedBy", fields: [uploadedBy], references: [id], onDelete: Restrict)
+  uploadedAt      DateTime @default(now())
+  isPrimaryPdf    Boolean  @default(false)
+
+  @@index([invoiceId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_Activity {
+  id          String   @id @default(uuid()) @db.Uuid
+  invoiceId   String   @db.Uuid
+  invoice     Invoices @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  actorId Int
+  actor       User    @relation("InvoiceActivityActor", fields: [actorId], references: [id], onDelete: Restrict)
+  action      String
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_TaxRates {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  rate        Decimal  @db.Decimal(5, 2)
+  isDefault   Boolean  @default(false)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lineItems   Invoice_LineItems[]
+  defaultForSettings Invoice_Settings[]
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_Series {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  prefixTemplate  String
+  resetPolicy     String   @default("YEARLY")
+  currentYear     Int?
+  counter         Int      @default(0)
+  isDefault       Boolean  @default(false)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  invoices        Invoices[]
+  defaultForSettings Invoice_Settings[]
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Invoice_Settings {
+  id                  String   @id @default(uuid()) @db.Uuid
+  baseCurrency        String   @db.VarChar(3)
+  defaultSeriesId     String?  @db.Uuid
+  defaultSeries       Invoice_Series? @relation(fields: [defaultSeriesId], references: [id], onDelete: SetNull)
+  defaultTaxRateId    String?  @db.Uuid
+  defaultTaxRate      Invoice_TaxRates? @relation(fields: [defaultTaxRateId], references: [id], onDelete: SetNull)
+  defaultDueDays      Int      @default(14)
+  bankName            String?
+  bankAccount         String?
+  iban                String?
+  swift               String?
+  footerText          String?
+  companyName         String?
+  companyAddress      String?
+  companyCity         String?
+  companyZip          String?
+  companyCountry      String?
+  companyVatId        String?
+  companyTaxId        String?
+  companyRegNo        String?
+  companyEmail        String?
+  companyPhone        String?
+  companyWebsite      String?
+  updatedAt           DateTime @updatedAt
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Currency {
+  code      String   @id @db.VarChar(3)
+  name      String
+  symbol    String   @db.VarChar(5)
+  isEnabled Boolean  @default(true)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ratesFrom     ExchangeRate[]      @relation("rate_from")
+  ratesTo       ExchangeRate[]      @relation("rate_to")
+  invoices        Invoices[]          @relation("InvoiceCurrency")
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model ExchangeRate {
+  id            String             @id @default(uuid()) @db.Uuid
+  fromCurrency  String             @db.VarChar(3)
+  toCurrency    String             @db.VarChar(3)
+  rate          Decimal            @db.Decimal(18, 8)
+  source        ExchangeRateSource @default(MANUAL)
+  effectiveDate DateTime           @default(now())
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  from Currency @relation("rate_from", fields: [fromCurrency], references: [code])
+  to   Currency @relation("rate_to", fields: [toCurrency], references: [code])
+
+  @@unique([fromCurrency, toCurrency])
+  @@index([fromCurrency])
+  @@index([toCurrency])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model EmailAccount {
+  id                String    @id @default(uuid()) @db.Uuid
+  userId Int
+  label             String
+  imapHost          String
+  imapPort          Int
+  imapSsl           Boolean   @default(true)
+  smtpHost          String
+  smtpPort          Int
+  smtpSsl           Boolean   @default(true)
+  allowSelfSignedTls Boolean  @default(false)
+  username          String
+  passwordEncrypted String
+  isActive          Boolean   @default(true)
+  sentFolderName    String    @default("Sent")
+  lastSyncedAt      DateTime?
+  inboxLastUid      Int?
+  sentLastUid       Int?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails Email[]
+
+  @@index([userId])
+  @@index([isActive])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model Email {
+  id              String      @id @default(uuid()) @db.Uuid
+  emailAccountId  String      @db.Uuid
+  userId Int
+  rfcMessageId    String
+  imapUid         Int?
+  folder          EmailFolder
+  subject         String?
+  fromName        String?
+  fromEmail       String?
+  toRecipients    Json        @default("[]")
+  ccRecipients    Json        @default("[]")
+  bccRecipients   Json        @default("[]")
+  bodyText        String?
+  bodyHtml        String?
+  sentAt          DateTime?
+  isRead          Boolean     @default(false)
+  isDeleted       Boolean     @default(false)
+  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime    @default(now())
+
+  account   EmailAccount     @relation(fields: [emailAccountId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  embedding EmailEmbedding?
+  contacts  EmailsToContacts[]
+  accounts  EmailsToAccounts[]
+
+  @@unique([emailAccountId, rfcMessageId])
+  @@index([userId])
+  @@index([emailAccountId])
+  @@index([folder])
+  @@index([isDeleted])
+  @@index([sentAt])
+  @@index([userId, folder, isDeleted, isRead])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model EmailEmbedding {
+  id          String   @id @default(uuid()) @db.Uuid
+  emailId     String   @unique @db.Uuid
+  embedding   Unsupported("vector(1536)")
+  contentHash String
+  embeddedAt  DateTime @default(now())
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@map("EmailEmbedding")
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model EmailsToContacts {
+  emailId   String @db.Uuid
+  contactId String
+
+  email   Email        @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@id([emailId, contactId])
+  @@index([emailId])
+  @@index([contactId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model EmailsToAccounts {
+  emailId   String @db.Uuid
+  accountId String
+
+  email   Email        @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@id([emailId, accountId])
+  @@index([emailId])
+  @@index([accountId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model CalendarConnection {
+  id                    String           @id @default(uuid()) @db.Uuid
+  userId Int
+  provider              CalendarProvider
+  accountEmail          String
+  accessTokenEncrypted  String?
+  refreshTokenEncrypted String
+  tokenExpiresAt        DateTime?
+  syncToken             String?
+  scopeLevel            String           @default("readonly")
+  isActive              Boolean          @default(true)
+  lastSyncedAt          DateTime?
+  lastSyncError         String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  calendarEvents crm_CalendarEvents[]
+
+  @@unique([userId, provider, accountEmail])
+  @@index([userId])
+  @@index([isActive])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_CalendarEvents {
+  id             String    @id @default(uuid()) @db.Uuid
+  source         String
+  externalId     String
+  iCalUID        String?
+  connectionId   String?   @db.Uuid
+  activityId     String    @db.Uuid
+  startAt        DateTime
+  endAt          DateTime?
+  attendeeEmails Json      @default("[]")
+  status         String    @default("scheduled")
+  rawPayload     Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  connection CalendarConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  activity   crm_Activities      @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([source, externalId])
+  @@index([iCalUID])
+  @@index([activityId])
+  @@index([startAt])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model ApiToken {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String    @db.VarChar(8)
+  userId Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  lastUsedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model ApiKeys {
+  id           String         @id @default(uuid()) @db.Uuid
+  scope        ApiKeyScope
+  userId Int?
+  provider     ApiKeyProvider
+  encryptedKey String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([scope, provider])
+  @@index([userId, provider])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model systemServices {
+  id              String  @id @default(uuid()) @db.Uuid
+  v               Int     @map("__v")
+  name            String
+  serviceUrl      String?
+  serviceId       String?
+  serviceKey      String?
+  servicePassword String?
+  servicePort     String?
+  description     String?
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_AuditLog {
+  id         String    @id @default(uuid()) @db.Uuid
+  entityType String
+  entityId   String    @db.Uuid
+  action     crm_AuditLog_Action
+  changes    Json?     @db.JsonB
+  userId Int?
+  createdAt  DateTime  @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([entityType, createdAt])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_Report_Config {
+  id        String   @id @default(cuid())
+  name      String
+  category  String   // sales | leads | accounts | activity | campaigns | users
+  filters   Json     @db.JsonB
+  isShared  Boolean  @default(false)
+  createdBy Int
+
+  user      User    @relation("report_configs", fields: [createdBy], references: [id])
+  schedules crm_Report_Schedule[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdBy])
+  @@index([category])
+  @@index([isShared])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_Report_Schedule {
+  id             String    @id @default(cuid())
+  reportConfigId String
+  cronExpression String
+  recipients     Json      @db.JsonB
+  format         String    // csv | pdf | both
+  isActive       Boolean   @default(true)
+  lastSentAt     DateTime?
+  createdBy Int
+
+  reportConfig crm_Report_Config @relation(fields: [reportConfigId], references: [id], onDelete: Cascade)
+  user         User              @relation("report_schedules", fields: [createdBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reportConfigId])
+  @@index([createdBy])
+  @@index([isActive])
+  @@index([lastSentAt])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_SystemSettings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_ActivityLinks {
+  id         String          @id @default(uuid()) @db.Uuid
+  activityId String          @db.Uuid
+  entityType String
+  entityId   String          @db.Uuid
+
+  activity crm_Activities @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([activityId])
+  @@index([entityType, entityId, activityId])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_Activities {
+  id          String               @id @default(uuid()) @db.Uuid
+  type        crm_Activity_Type
+  title       String
+  description String?
+  date        DateTime
+  duration    Int?
+  outcome     String?
+  status      crm_Activity_Status  @default(scheduled)
+  metadata    Json?                @db.JsonB
+  createdBy Int?
+  updatedBy Int?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime?            @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?              @db.Uuid
+
+  created_by_user User?              @relation("activity_created_by", fields: [createdBy], references: [id])
+  updated_by_user User?              @relation("activity_updated_by", fields: [updatedBy], references: [id])
+  links       crm_ActivityLinks[]
+  calendar_events crm_CalendarEvents[]
+
+  @@index([date])
+  @@index([type])
+  @@index([status])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@index([deletedAt])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_Embeddings_Documents {
+  id           String   @id @default(uuid()) @db.Uuid
+  document_id  String   @unique @db.Uuid
+  embedding    Unsupported("vector(1536)")
+  content_hash String
+  /// Must be set explicitly on upsert — @default(now()) only fires on INSERT
+  embedded_at  DateTime @default(now())
+  document     Documents @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@map("crm_Embeddings_Documents")
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_Document_Chunks {
+  id           String   @id @default(uuid()) @db.Uuid
+  document_id  String   @db.Uuid
+  chunk_index  Int
+  chunk_text   String
+  embedding    Unsupported("vector(1536)")
+  embedded_at  DateTime @default(now())
+  document     Documents @relation(fields: [document_id], references: [id], onDelete: Cascade)
+
+  @@index([document_id])
+  @@map("crm_Document_Chunks")
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+model crm_Accounts_Tasks {
+  id         String      @id @default(uuid()) @db.Uuid
+  v          Int         @map("__v")
+  content    String?
+  createdAt  DateTime?   @default(now())
+  createdBy  String?     @db.Uuid
+  updatedAt  DateTime?   @updatedAt
+  updatedBy  String?     @db.Uuid
+  dueDateAt  DateTime?   @default(now())
+  priority   String
+  tags       Json?       @db.JsonB
+  title      String
+  likes      BigInt?     @default(0)
+  user Int?
+  taskStatus taskStatus? @default(ACTIVE)
+
+  comments      tasksComments[]
+  assigned_user User?          @relation(fields: [user], references: [id])
+
+  //CRM assigments
+  account String?
+  opportunity_id String?
+  documents      DocumentsToCrmAccountsTasks[]
+
+  @@index([user])
+  @@index([account])
+  @@index([createdBy])
+  @@index([updatedBy])
+  @@index([priority])
+  @@index([taskStatus])
+  @@index([dueDateAt])
+  @@index([createdAt])
+  @@index([account, taskStatus])
+  @@index([opportunity_id])
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  @@index([organizationId])
+}
+
+// ============================================================================
+// Organization Membership (P0-1): Multi-org membership + active org switching
+// ============================================================================
+
+/// Multi-organization membership (P0-1). Enables a user to belong to >1 org and switch the
+/// active organization. organizationId in the JWT session/user is the "current" org.
+enum OrganizationMemberRole {
+  org_admin
+  org_manager
+  org_member
+}
+
+model OrganizationMember {
+  id             Int                    @id @default(autoincrement())
+  userId         Int
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId Int
+  organization   Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role           OrganizationMemberRole @default(org_member)
+  isDefault      Boolean                @default(false)
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+
+// ============================================================================
+// 8. EMAIL TEMPLATES
+// ============================================================================
+
+model EmailTemplate {
+  id            Int      @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name          String
+  subject       String
+  bodyHtml      String
+  bodyText      String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now())
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }

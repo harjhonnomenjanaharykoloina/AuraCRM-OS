@@ -1,26 +1,10 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { enqueueSharingRuleRecompute } from "@/lib/jobs/sharing-rule-jobs";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 async function enqueueSharingRecomputeForOrg(organizationId: number) {
     const rules = await db.sharingRule.findMany({
@@ -42,8 +26,7 @@ const groupSchema = z.object({
 
 export async function createGroup(data: z.infer<typeof groupSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = groupSchema.parse(data);
 
@@ -67,8 +50,7 @@ export async function createGroup(data: z.infer<typeof groupSchema>) {
 
 export async function updateGroup(groupId: number, data: z.infer<typeof groupSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = groupSchema.parse(data);
 
@@ -98,8 +80,7 @@ export async function updateGroup(groupId: number, data: z.infer<typeof groupSch
 
 export async function deleteGroup(groupId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const existing = await db.group.findUnique({
             where: { id: groupId, organizationId },
@@ -122,8 +103,7 @@ const groupMemberSchema = z.object({
 
 export async function assignUserToGroup(groupId: number, userId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = groupMemberSchema.parse({ userId, groupId });
 
@@ -158,8 +138,7 @@ export async function assignUserToGroup(groupId: number, userId: number) {
 
 export async function removeUserFromGroup(userId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const user = await db.user.findUnique({
             where: { id: userId, organizationId },

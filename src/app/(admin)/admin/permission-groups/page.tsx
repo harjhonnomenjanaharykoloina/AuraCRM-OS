@@ -13,13 +13,14 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { CreatePermissionGroupDialog } from "@/components/admin/permissions/create-permission-group-dialog";
+import { getSessionUser } from "@/lib/auth/types";
 
 export default async function PermissionGroupsPage() {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const t = await getT();
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const organizationId = user.organizationId;
 
     const groups = await db.permissionSetGroup.findMany({
         where: { organizationId },

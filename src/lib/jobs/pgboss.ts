@@ -1,11 +1,32 @@
 import PgBoss from "pg-boss";
 
-let bossInstance: PgBoss | null = null;
-let bossStart: Promise<PgBoss> | null = null;
+// Use globalThis to preserve the boss instance across HMR module re-evaluations
+const globalForBoss = globalThis as unknown as {
+    boss: PgBoss | null;
+    bossStart: Promise<PgBoss> | null;
+};
+
+// Graceful shutdown: stop pg-boss and disconnect when the process exits
+if (!globalForBoss.boss) {
+    const shutdown = async () => {
+        if (globalForBoss.boss) {
+            try {
+                await globalForBoss.boss.stop({ timeout: 5000 });
+            } catch (e) {
+                console.error("Error stopping pg-boss:", e);
+            } finally {
+                globalForBoss.boss = null;
+            }
+        }
+        process.exit(0);
+    };
+    process.on("SIGINT", shutdown);
+    process.on("SIGTERM", shutdown);
+}
 
 export async function getBoss(): Promise<PgBoss> {
-    if (bossInstance) return bossInstance;
-    if (bossStart) return bossStart;
+    if (globalForBoss.boss) return globalForBoss.boss;
+    if (globalForBoss.bossStart) return globalForBoss.bossStart;
 
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
@@ -17,14 +38,22 @@ export async function getBoss(): Promise<PgBoss> {
         console.error("pg-boss error:", error);
     });
 
-    bossStart = boss.start().then(() => {
-        bossInstance = boss;
-        bossStart = null;
+    globalForBoss.bossStart = boss.start().then(() => {
+        globalForBoss.boss = boss;
+        globalForBoss.bossStart = null;
         return boss;
     }).catch((error) => {
-        bossStart = null;
+        globalForBoss.bossStart = null;
         throw error;
     });
 
-    return bossStart;
+    return globalForBoss.bossStart;
+}
+
+export async function disconnectBoss() {
+    if (globalForBoss.boss) {
+        await globalForBoss.boss.stop({ timeout: 5000 });
+        globalForBoss.boss = null;
+    }
+    globalForBoss.bossStart = null;
 }

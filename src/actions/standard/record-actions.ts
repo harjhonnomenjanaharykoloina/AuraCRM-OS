@@ -18,7 +18,7 @@ import {
     type ValidationRule,
 } from "@prisma/client";
 import { checkPermission, getUserPermissionSetIds } from "@/lib/permissions";
-import { buildRecordAccessFilter, buildRecordAccessSql, getUserQueueIds } from "@/lib/record-access";
+import { buildRecordAccessFilter, buildRecordAccessSql, getUserAccessContext, getUserQueueIds } from "@/lib/record-access";
 import {
     buildFieldDataPayload,
     deriveRecordName,
@@ -52,6 +52,7 @@ import {
 import { deleteFolderSafe, resolveStoragePath } from "@/lib/file-storage";
 import { findDuplicateMatches } from "@/lib/duplicates/duplicate-rules";
 import { USER_ID_FIELD_API_NAME, USER_OBJECT_API_NAME } from "@/lib/user-companion";
+import { computeProbability, computeExpectedRevenue, getForecastCategoryForStage } from "@/lib/opportunity";
 import {
     getDateOnlyRange,
     getTemporalComparableValue,
@@ -929,7 +930,7 @@ async function resolveAssignmentRule(
     return null;
 }
 
-async function applySharingRules(
+export async function applySharingRules(
     tx: Prisma.TransactionClient,
     organizationId: number,
     objectDefId: number,
@@ -1079,7 +1080,7 @@ export async function getRecords(
 ) {
     const all = opts?.all === true;
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -1468,7 +1469,7 @@ export async function getRecords(
 
 export async function getRecord(objectApiName: string, recordId: number, opts?: { includeDeleted?: boolean }) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -2001,12 +2002,8 @@ async function generateAutoNumberValues(
 
 export async function createRecord(objectApiName: string, data: Record<string, any>) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
-    const permissionSetIds = await getUserPermissionSetIds(userId);
-    const userGroupId = (await db.user.findUnique({
-        where: { id: userId },
-        select: { groupId: true },
-    }))?.groupId ?? null;
+    const accessContext = await getUserAccessContext(userId, organizationId);
+    const { queueIds, permissionSetIds, userGroupId } = accessContext;
     const duplicateConfirmRuleIds = parseDuplicateConfirmRuleIds(data.__duplicateConfirmRuleIds);
     delete data.__duplicateConfirmRuleIds;
 
@@ -2268,12 +2265,8 @@ export async function createRecord(objectApiName: string, data: Record<string, a
 
 export async function updateRecord(objectApiName: string, recordId: number, data: Record<string, any>) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
-    const permissionSetIds = await getUserPermissionSetIds(userId);
-    const userGroupId = (await db.user.findUnique({
-        where: { id: userId },
-        select: { groupId: true },
-    }))?.groupId ?? null;
+    const accessContext = await getUserAccessContext(userId, organizationId);
+    const { queueIds, permissionSetIds, userGroupId } = accessContext;
     const duplicateConfirmRuleIds = parseDuplicateConfirmRuleIds(data.__duplicateConfirmRuleIds);
     delete data.__duplicateConfirmRuleIds;
 
@@ -2403,6 +2396,64 @@ export async function updateRecord(objectApiName: string, recordId: number, data
         );
     } catch (error: any) {
         return { success: false, error: error.message || "Validation rule failed", errorPlacement: error?.errorPlacement, errorFieldId: error?.errorFieldId };
+    }
+
+    // Opportunity stage auto-derivation
+    if (objectApiName === "opportunity" && finalValueMap.stage !== undefined && finalValueMap.stage !== null) {
+        const stageField = record.objectDef.fields.find((f: any) => f.apiName === "stage");
+        if (stageField) {
+            const newStageOption = stageField.picklistOptions?.find((opt: any) =>
+                opt.id === Number(finalValueMap.stage) || opt.apiName === String(finalValueMap.stage)
+            );
+            if (newStageOption?.label) {
+                const newStage = newStageOption.label;
+                const currentStageField = record.fields.find((f: any) => f.fieldDef.apiName === "stage");
+                const currentStage = currentStageField?.valuePicklist?.label ?? null;
+                if (newStage !== currentStage) {
+                    const autoProbability = computeProbability(newStage);
+                    finalValueMap.probability = autoProbability;
+                    finalFieldData.probability = autoProbability;
+
+                    // Resolve forecast_category picklist option ID from label
+                    const forecastField = record.objectDef.fields.find((f: any) => f.apiName === "forecast_category");
+                    const newForecastCategory = getForecastCategoryForStage(newStage);
+                    const forecastOption = forecastField?.picklistOptions?.find((opt: any) => opt.label === newForecastCategory);
+                    if (forecastOption) {
+                        finalValueMap.forecast_category = forecastOption.id;
+                        finalFieldData.forecast_category = forecastOption.id;
+                    }
+
+                    // Compute expected revenue from amount (current or updated)
+                    const currentAmountField = record.fields.find((f: any) => f.fieldDef.apiName === "amount");
+                    const amountValue = finalValueMap.amount ?? getFieldDisplayValue(currentAmountField);
+                    const expectedRevenue = computeExpectedRevenue(amountValue, autoProbability);
+                    if (expectedRevenue !== null) {
+                        finalValueMap.expected_revenue = expectedRevenue;
+                        finalFieldData.expected_revenue = expectedRevenue;
+                    }
+                }
+            }
+        }
+    }
+
+    // Recompute expected_revenue when amount changes independently of stage
+    if (objectApiName === "opportunity" && "amount" in data && data.amount !== undefined) {
+        const stageField = record.objectDef.fields.find((f: any) => f.apiName === "stage");
+        if (stageField) {
+            const currentStageField = record.fields.find((f: any) => f.fieldDef.apiName === "stage");
+            const currentStageLabel = currentStageField?.valuePicklist?.label ?? null;
+            if (currentStageLabel) {
+                const currentProbability = computeProbability(currentStageLabel);
+                const amountValue = finalValueMap.amount ?? getFieldDisplayValue(
+                    record.fields.find((f: any) => f.fieldDef.apiName === "amount")
+                );
+                const expectedRevenue = computeExpectedRevenue(amountValue, currentProbability);
+                if (expectedRevenue !== null) {
+                    finalValueMap.expected_revenue = expectedRevenue;
+                    finalFieldData.expected_revenue = expectedRevenue;
+                }
+            }
+        }
     }
 
     const canReadObject = await checkPermission(userId, organizationId, objectApiName, "read");
@@ -2842,7 +2893,7 @@ export async function updateOwnUserRecord(recordId: number, data: Record<string,
 
 export async function claimRecord(objectApiName: string, recordId: number) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
 
     if (objectApiName === USER_OBJECT_API_NAME) {
         return { success: false, error: "User records cannot be queue-owned or claimed." };
@@ -2964,11 +3015,8 @@ export async function claimRecord(objectApiName: string, recordId: number) {
 
 export async function deleteRecord(appApiName: string, objectApiName: string, recordId: number) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
-    const userGroupId = (await db.user.findUnique({
-        where: { id: userId },
-        select: { groupId: true },
-    }))?.groupId ?? null;
+    const accessContext = await getUserAccessContext(userId, organizationId);
+    const { queueIds, userGroupId } = accessContext;
 
     // Permission Check
     const canModifyAll = await checkPermission(userId, organizationId, objectApiName, "modifyAll");
@@ -3019,7 +3067,7 @@ export async function deleteRecord(appApiName: string, objectApiName: string, re
 
 export async function restoreRecord(appApiName: string, objectApiName: string, recordId: number) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -3072,7 +3120,7 @@ export async function restoreRecord(appApiName: string, objectApiName: string, r
 
 export async function purgeRecord(appApiName: string, objectApiName: string, recordId: number) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -3175,7 +3223,7 @@ export async function moveRecord(
         return { success: false, error: "Insufficient permissions" };
     }
 
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId =
         (await db.user.findUnique({
             where: { id: userId },
