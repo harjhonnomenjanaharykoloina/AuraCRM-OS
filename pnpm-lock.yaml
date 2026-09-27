@@ -188,6 +188,9 @@ importers:
       pg-boss:
         specifier: ^11.1.2
         version: 11.1.2
+      prisma:
+        specifier: ^7.10.0
+        version: 7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.3.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@6.0.3)
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -261,9 +264,6 @@ importers:
       postinstall-postinstall:
         specifier: ^2.1.0
         version: 2.1.0
-      prisma:
-        specifier: ^7.10.0
-        version: 7.10.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(magicast@0.3.5)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@6.0.3)
       tailwindcss:
         specifier: ^4
         version: 4.3.3
