@@ -45,7 +45,7 @@ export function RemoveUserFromPermissionSetGroupButton({
             } else {
                 toast.error(result.error || "Failed to remove user.");
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to remove user.");
         } finally {
             setIsLoading(false);

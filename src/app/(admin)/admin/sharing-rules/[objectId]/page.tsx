@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -17,8 +19,10 @@ import { SharingRuleOrderControls } from "@/components/admin/sharing-rules/shari
 
 export default async function SharingRulesObjectPage({ params }: { params: Promise<{ objectId: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
     const { objectId } = await params;
     const objectDefId = parseInt(objectId, 10);
 
@@ -49,19 +53,19 @@ export default async function SharingRulesObjectPage({ params }: { params: Promi
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{objectDef.label} Sharing Rules</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">{t("admin.sharingRuleDetail.title", { objectLabel: objectDef.label })}</h1>
                     <p className="text-sm text-muted-foreground">
-                        Rules are evaluated top to bottom; each match grants access.
+                        {t("admin.sharingRuleDetail.evaluationNote")}
                     </p>
                 </div>
             </div>
 
             <div className="flex items-center justify-between">
                 <div className="text-sm text-muted-foreground">
-                    Use the arrows to change priority order.
+                    {t("admin.sharingRuleDetail.orderHelp")}
                 </div>
                 <Button asChild>
-                    <Link href={`/admin/sharing-rules/${objectDef.id}/new`}>New Rule</Link>
+                    <Link href={`/admin/sharing-rules/${objectDef.id}/new`}>{t("admin.sharingRuleDetail.newRule")}</Link>
                 </Button>
             </div>
 
@@ -69,12 +73,12 @@ export default async function SharingRulesObjectPage({ params }: { params: Promi
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[120px]">Order</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Group</TableHead>
-                            <TableHead>Access</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-[180px]">Actions</TableHead>
+                            <TableHead>{t("admin.sharingRuleDetail.order")}</TableHead>
+                            <TableHead>{t("shared.common.name")}</TableHead>
+                            <TableHead>{t("admin.sharingRuleDetail.group")}</TableHead>
+                            <TableHead>{t("admin.sharingRuleDetail.access")}</TableHead>
+                            <TableHead>{t("admin.sharingRuleDetail.status")}</TableHead>
+                            <TableHead className="w-[180px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -95,9 +99,9 @@ export default async function SharingRulesObjectPage({ params }: { params: Promi
                                         {rule.name}
                                     </Link>
                                 </TableCell>
-                                <TableCell>{rule.targetGroup?.name ?? "Unknown Group"}</TableCell>
-                                <TableCell>{rule.accessLevel === "DELETE" ? "Edit/Delete" : rule.accessLevel}</TableCell>
-                                <TableCell>{rule.isActive ? "Active" : "Inactive"}</TableCell>
+                                <TableCell>{rule.targetGroup?.name ?? t("admin.sharingRuleDetail.unknownGroup")}</TableCell>
+                                <TableCell>{rule.accessLevel === "DELETE" ? t("admin.sharingRuleDetail.editDelete") : rule.accessLevel}</TableCell>
+                                <TableCell>{rule.isActive ? t("shared.status.active") : t("shared.status.inactive")}</TableCell>
                                 <TableCell>
                                     <SharingRuleActions ruleId={rule.id} isActive={rule.isActive} />
                                 </TableCell>
@@ -106,7 +110,7 @@ export default async function SharingRulesObjectPage({ params }: { params: Promi
                         {rules.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                    No sharing rules yet. Create one to get started.
+                                    {t("admin.sharingRuleDetail.noRulesYet")}
                                 </TableCell>
                             </TableRow>
                         )}

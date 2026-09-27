@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { createDuplicateRule, updateDuplicateRule } from "@/actions/admin/duplicate-rule-actions";
 import { validateCustomLogicExpressionInput } from "@/lib/validation/rule-logic";
+import { useTranslations } from "@/i18n/client";
 
 type FieldOption = {
     id: number;
@@ -74,6 +75,7 @@ export function DuplicateRuleForm({
     initial,
     backHref,
 }: DuplicateRuleFormProps) {
+    const t = useTranslations();
     const router = useRouter();
     const [name, setName] = useState(initial?.name ?? "");
     const [description, setDescription] = useState(initial?.description ?? "");
@@ -103,12 +105,12 @@ export function DuplicateRuleForm({
         const result = validateCustomLogicExpressionInput(logicExpression, conditions.length);
         if (!result.valid) {
             if (result.message === "Expression references a condition number that does not exist.") {
-                return { valid: false, message: `Use condition numbers between 1 and ${conditions.length}.` };
+                return { valid: false, message: t("admin.ruleCommon.useConditionNumbers", { count: conditions.length }) };
             }
             return { valid: false, message: result.message };
         }
         return { valid: true, message: "" };
-    }, [logicOperator, logicExpression, conditions.length]);
+    }, [logicOperator, logicExpression, conditions.length, t]);
 
     const addCondition = () => {
         const nextField = fields.find((field) => !conditions.some((condition) => condition.fieldDefId === field.id)) ?? fields[0];
@@ -125,7 +127,7 @@ export function DuplicateRuleForm({
 
     const handleSubmit = async () => {
         if (!name.trim()) {
-            toast.error("Name is required.");
+            toast.error(t("admin.duplicateRuleCreate.nameRequired"));
             return;
         }
 
@@ -133,15 +135,15 @@ export function DuplicateRuleForm({
             .map((condition) => condition.fieldDefId)
             .filter((value): value is number => typeof value === "number");
         if (fieldDefIds.length < 2) {
-            toast.error("Choose at least two fields.");
+            toast.error(t("admin.duplicateRuleCreate.chooseTwoFields"));
             return;
         }
         if (new Set(fieldDefIds).size !== fieldDefIds.length) {
-            toast.error("Each field can only be used once in a duplicate rule.");
+            toast.error(t("admin.duplicateRuleCreate.fieldOnce"));
             return;
         }
         if (logicOperator === "CUSTOM" && !customLogicValidation.valid) {
-            toast.error(customLogicValidation.message || "Fix the custom logic expression.");
+            toast.error(customLogicValidation.message || t("admin.duplicateRuleCreate.fixCustomLogic"));
             return;
         }
 
@@ -163,11 +165,11 @@ export function DuplicateRuleForm({
                 : await updateDuplicateRule(initial?.id ?? 0, payload);
 
         if (!result.success) {
-            toast.error(result.error || "Failed to save duplicate rule.");
+            toast.error(result.error || t("admin.duplicateRuleCreate.saveError"));
             return;
         }
 
-        toast.success(mode === "create" ? "Duplicate rule created." : "Duplicate rule updated.");
+        toast.success(mode === "create" ? t("admin.duplicateRuleCreate.created") : t("admin.duplicateRuleCreate.updated"));
         router.push(backHref);
         router.refresh();
     };
@@ -177,52 +179,52 @@ export function DuplicateRuleForm({
             <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div className="space-y-1">
-                        <CardTitle>{mode === "create" ? "New duplicate rule" : "Edit duplicate rule"}</CardTitle>
+                        <CardTitle>{mode === "create" ? t("admin.duplicateRuleCreate.newRule") : t("admin.duplicateRuleCreate.editRule")}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                            Detect likely duplicate <span className="font-medium text-foreground">{objectDef.label}</span> records using multi-field matching.
+                            {t("admin.duplicateRuleCreate.subtitle", { objectLabel: objectDef.label })}
                         </p>
                     </div>
-                    <Badge variant={isActive ? "default" : "secondary"}>{isActive ? "Active" : "Inactive"}</Badge>
+                    <Badge variant={isActive ? "default" : "secondary"}>{isActive ? t("shared.status.active") : t("shared.status.inactive")}</Badge>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                        <Label>Rule name</Label>
-                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Contact identity check" />
+                        <Label>{t("admin.duplicateRuleCreate.ruleName")}</Label>
+                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("admin.duplicateRuleCreate.ruleNamePlaceholder")} />
                     </div>
                     <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-4 py-3">
                         <div>
-                            <p className="text-sm font-medium">Rule status</p>
-                            <p className="text-xs text-muted-foreground">Pause this rule without deleting it.</p>
+                            <p className="text-sm font-medium">{t("admin.duplicateRuleCreate.ruleStatus")}</p>
+                            <p className="text-xs text-muted-foreground">{t("admin.duplicateRuleCreate.pauseHint")}</p>
                         </div>
                         <Switch checked={isActive} onCheckedChange={setIsActive} />
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                        <Label>Description</Label>
-                        <Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Optional description" />
+                        <Label>{t("admin.duplicateRuleCreate.description")}</Label>
+                        <Textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder={t("admin.duplicateRuleCreate.descriptionPlaceholder")} />
                     </div>
                     <div className="space-y-2">
-                        <Label>On create</Label>
+                        <Label>{t("admin.duplicateRuleCreate.onCreate")}</Label>
                         <Select value={createAction} onValueChange={(value) => setCreateAction(value as "NONE" | "WARN" | "BLOCK")}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="NONE">Do nothing</SelectItem>
-                                <SelectItem value="WARN">Warn</SelectItem>
-                                <SelectItem value="BLOCK">Block</SelectItem>
+                                <SelectItem value="NONE">{t("admin.duplicateRuleCreate.actionNone")}</SelectItem>
+                                <SelectItem value="WARN">{t("admin.duplicateRuleCreate.actionWarn")}</SelectItem>
+                                <SelectItem value="BLOCK">{t("admin.duplicateRuleCreate.actionBlock")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label>On edit</Label>
+                        <Label>{t("admin.duplicateRuleCreate.onEdit")}</Label>
                         <Select value={editAction} onValueChange={(value) => setEditAction(value as "NONE" | "WARN" | "BLOCK")}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="NONE">Do nothing</SelectItem>
-                                <SelectItem value="WARN">Warn</SelectItem>
-                                <SelectItem value="BLOCK">Block</SelectItem>
+                                <SelectItem value="NONE">{t("admin.duplicateRuleCreate.actionNone")}</SelectItem>
+                                <SelectItem value="WARN">{t("admin.duplicateRuleCreate.actionWarn")}</SelectItem>
+                                <SelectItem value="BLOCK">{t("admin.duplicateRuleCreate.actionBlock")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -232,14 +234,14 @@ export function DuplicateRuleForm({
             <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div className="space-y-1">
-                        <CardTitle>Matching Fields</CardTitle>
+                        <CardTitle>{t("admin.duplicateRuleCreate.matchingFields")}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                            Each numbered condition means the field value must exactly match another record.
+                            {t("admin.duplicateRuleCreate.matchingHint")}
                         </p>
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={addCondition} className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Add field
+                        {t("admin.duplicateRuleCreate.addField")}
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -247,8 +249,8 @@ export function DuplicateRuleForm({
                         <div key={condition.id} className="rounded-xl border bg-card/70 p-4 shadow-sm">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-semibold">Condition {index + 1}</p>
-                                    <p className="text-xs text-muted-foreground">Exact-match field comparison.</p>
+                                    <p className="text-sm font-semibold">{t("admin.duplicateRuleCreate.condition", { count: index + 1 })}</p>
+                                    <p className="text-xs text-muted-foreground">{t("admin.duplicateRuleCreate.exactMatchHint")}</p>
                                 </div>
                                 <Button
                                     type="button"
@@ -261,13 +263,13 @@ export function DuplicateRuleForm({
                                 </Button>
                             </div>
                             <div className="mt-4 space-y-2">
-                                <Label>Field</Label>
+                                <Label>{t("admin.duplicateRuleCreate.field")}</Label>
                                 <Select
                                     value={condition.fieldDefId ? String(condition.fieldDefId) : undefined}
                                     onValueChange={(value) => updateCondition(condition.id, Number(value))}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select field..." />
+                                        <SelectValue placeholder={t("admin.duplicateRuleCreate.selectField")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {fields.map((field) => (
@@ -282,37 +284,37 @@ export function DuplicateRuleForm({
                     ))}
 
                     <div className="rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground">
-                        Strong duplicate keys are usually combinations like email + phone, first name + last name + birth date, or company name + website.
+                        {t("admin.duplicateRuleCreate.strongKeysHint")}
                     </div>
                 </CardContent>
             </Card>
 
             <Card className="shadow-sm">
                 <CardHeader>
-                    <CardTitle>Rule Logic</CardTitle>
+                    <CardTitle>{t("admin.duplicateRuleCreate.ruleLogic")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
-                        <Label>How conditions combine</Label>
+                        <Label>{t("admin.duplicateRuleCreate.howCombine")}</Label>
                         <Select value={logicOperator} onValueChange={(value) => setLogicOperator(value as "ALL" | "ANY" | "CUSTOM")}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="ALL">All conditions must match</SelectItem>
-                                <SelectItem value="ANY">Any condition can match</SelectItem>
-                                <SelectItem value="CUSTOM">Custom logic</SelectItem>
+                                <SelectItem value="ALL">{t("admin.duplicateRuleCreate.allMustMatch")}</SelectItem>
+                                <SelectItem value="ANY">{t("admin.duplicateRuleCreate.anyCanMatch")}</SelectItem>
+                                <SelectItem value="CUSTOM">{t("admin.duplicateRuleCreate.customLogic")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
                     {logicOperator === "CUSTOM" && (
                         <div className="space-y-2">
-                            <Label>Custom logic</Label>
+                            <Label>{t("admin.duplicateRuleCreate.customLogic")}</Label>
                             <Input
                                 value={logicExpression}
                                 onChange={(event) => setLogicExpression(event.target.value)}
-                                placeholder="(1 AND 2) OR 3"
+                                placeholder={t("admin.duplicateRuleCreate.customLogicPlaceholder")}
                             />
                             {!customLogicValidation.valid && (
                                 <p className="text-xs text-destructive">{customLogicValidation.message}</p>
@@ -326,7 +328,7 @@ export function DuplicateRuleForm({
                         {conditions.map((condition, index) => (
                             <div key={condition.id} className="rounded-lg border bg-muted/20 px-3 py-2">
                                 <span className="font-medium text-foreground">{index + 1}.</span>{" "}
-                                {condition.fieldDefId ? fieldMap.get(condition.fieldDefId)?.label ?? "Unknown field" : "Select a field"}
+                                {condition.fieldDefId ? fieldMap.get(condition.fieldDefId)?.label ?? t("admin.duplicateRuleCreate.unknownField") : t("admin.duplicateRuleCreate.selectAField")}
                             </div>
                         ))}
                     </div>
@@ -335,10 +337,10 @@ export function DuplicateRuleForm({
 
             <div className="flex gap-4 border-t border-border/50 pt-4">
                 <Button type="button" onClick={handleSubmit}>
-                    {mode === "create" ? "Create Rule" : "Save Changes"}
+                    {mode === "create" ? t("admin.duplicateRuleCreate.createRule") : t("admin.duplicateRuleCreate.saveChanges")}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => router.push(backHref)}>
-                    Cancel
+                    {t("admin.duplicateRuleCreate.cancel")}
                 </Button>
             </div>
         </div>

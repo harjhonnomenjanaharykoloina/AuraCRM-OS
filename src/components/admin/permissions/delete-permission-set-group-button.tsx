@@ -39,7 +39,7 @@ export function DeletePermissionSetGroupButton({ groupId, name }: DeletePermissi
             setOpen(false);
             router.push("/admin/permission-groups");
             router.refresh();
-        } catch (error) {
+        } catch {
             toast.error("Failed to delete group.");
         } finally {
             setIsLoading(false);

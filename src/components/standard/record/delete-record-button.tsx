@@ -40,7 +40,7 @@ export function DeleteRecordButton({
                 return;
             }
 
-            toast.success("Record deleted.");
+            toast.success("Record moved to trash.");
             setOpen(false);
             router.push(`/app/${appApiName}/${objectApiName}`);
             router.refresh();

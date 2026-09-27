@@ -1,95 +1,150 @@
-import { jwtVerify } from "jose"
+import { jwtVerify } from "jose";
 
-const COOKIE_NAME = "better-auth.session_data"
+const SESSION_COOKIE_NAME = "better-auth.session_data";
 
-function getCookies(req: Request): Record<string, string> {
-    const cookieHeader = req.headers.get("cookie") || req.headers.get("cookie") || ""
-    if (!cookieHeader) return {}
-
-    const cookies: Record<string, string> = {}
-    for (const part of cookieHeader.split(";")) {
-        const trimmed = part.trim()
-        const eq = trimmed.indexOf("=")
-        if (eq > 0) {
-            const key = trimmed.slice(0, eq).trim()
-            const val = trimmed.slice(eq + 1).trim()
-            cookies[key] = val
+function parseCookies(cookieHeader: string): Record<string, string> {
+    const cookies: Record<string, string> = {};
+    for (const item of cookieHeader.split(";")) {
+        const trimmed = item.trim();
+        const eqIndex = trimmed.indexOf("=");
+        if (eqIndex > 0) {
+            const name = trimmed.substring(0, eqIndex).trim();
+            const value = trimmed.substring(eqIndex + 1).trim();
+            try {
+                cookies[name] = decodeURIComponent(value);
+            } catch {
+                cookies[name] = value;
+            }
         }
     }
-    return cookies
+    return cookies;
 }
 
-function getSessionToken(cookies: Record<string, string>): string | null {
-    if (cookies[COOKIE_NAME]) return cookies[COOKIE_NAME]
-    if (cookies[`__Secure-${COOKIE_NAME}`]) return cookies[`__Secure-${COOKIE_NAME}`]
+function escapeRegExp(str: string): string {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-    const keys = Object.keys(cookies)
-    const baseKey = COOKIE_NAME
-    const chunked: string[] = []
-    for (const key of keys) {
-        if (key === baseKey) return cookies[key]
-        if (key === `__Secure-${baseKey}`) return cookies[key]
-        const match = key.match(new RegExp(`^(?:__Secure-)?${baseKey}\\.(\\d+)$`))
+function reconstructChunkedCookie(
+    cookies: Record<string, string>,
+    baseName: string
+): string | null {
+    if (cookies[baseName] !== undefined) {
+        return cookies[baseName];
+    }
+
+    const chunkPattern = new RegExp(`^${escapeRegExp(baseName)}-(\\d+)$`);
+    const chunks: Array<{ index: number; value: string }> = [];
+
+    for (const key of Object.keys(cookies)) {
+        const match = key.match(chunkPattern);
         if (match) {
-            const idx = parseInt(match[1], 10)
-            chunked[idx] = cookies[key]
+            chunks.push({
+                index: parseInt(match[1], 10),
+                value: cookies[key],
+            });
         }
     }
-    if (chunked.length > 0) {
-        return chunked
-            .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
-            .filter((v) => v !== undefined)
-            .join("")
+
+    if (chunks.length === 0) {
+        return null;
     }
 
-    return null
+    return chunks
+        .sort((a, b) => a.index - b.index)
+        .map((c) => c.value)
+        .join("");
+}
+
+function getSessionToken(req: Request): string | null {
+    const cookieHeader = req.headers.get("cookie");
+    if (!cookieHeader) {
+        return null;
+    }
+
+    const cookies = parseCookies(cookieHeader);
+
+    for (const prefix of ["__Host-", "__Secure-", ""]) {
+        const token = reconstructChunkedCookie(cookies, prefix + SESSION_COOKIE_NAME);
+        if (token) {
+            return token;
+        }
+    }
+
+    return null;
 }
 
 export async function getProxySession(req: Request): Promise<{
     user: {
-        id: string
-        email: string
-        name?: string
-        username?: string
-        organizationId?: number
-        userType?: string
-    }
+        id: string;
+        email?: string;
+        name?: string;
+        username?: string;
+        organizationId: number;
+        userType: string;
+    };
 } | null> {
-    const cookies = getCookies(req)
-    const token = getSessionToken(cookies)
-
-    if (!token) return null
-
-    const secret = process.env.JWT_SECRET || process.env.BETTER_AUTH_SECRET
+    const secret = process.env.BETTER_AUTH_SECRET ?? process.env.JWT_SECRET;
 
     if (!secret) {
-        console.error("[proxy] JWT_SECRET or BETTER_AUTH_SECRET is not set")
-        return null
+        console.warn(
+            "[getProxySession] Neither BETTER_AUTH_SECRET nor JWT_SECRET is set. " +
+            "Session verification is disabled."
+        );
+        return null;
+    }
+
+    const token = getSessionToken(req);
+    if (!token) {
+        return null;
     }
 
     try {
-        const { payload } = await jwtVerify(
-            token,
-            new TextEncoder().encode(secret)
-        )
+        const secretKey = new TextEncoder().encode(secret);
+        const { payload } = await jwtVerify(token, secretKey);
 
-        const user = payload.user as Record<string, unknown> | undefined
-        if (!user || !user.id || !user.email) {
-            return null
+        const u = (payload.user ?? payload) as Record<string, unknown>;
+
+        const id = u.id ?? payload.sub;
+        if (typeof id !== "string" || !id) {
+            console.error("[getProxySession] JWT payload is missing a valid user id");
+            return null;
         }
+
+        const organizationIdRaw = u.organizationId;
+        const organizationId =
+            typeof organizationIdRaw === "number"
+                ? organizationIdRaw
+                : Number(organizationIdRaw);
+        if (isNaN(organizationId)) {
+            console.error(
+                "[getProxySession] JWT payload is missing a valid organizationId"
+            );
+            return null;
+        }
+
+        const userType = u.userType;
+        if (typeof userType !== "string" || !userType) {
+            console.error("[getProxySession] JWT payload is missing a valid userType");
+            return null;
+        }
+
+        const email = typeof u.email === "string" ? u.email : undefined;
+        const name = typeof u.name === "string" ? u.name : undefined;
+        const username =
+            typeof u.username === "string" ? u.username : undefined;
 
         return {
             user: {
-                id: user.id as string,
-                email: user.email as string,
-                name: user.name as string | undefined,
-                username: user.username as string | undefined,
-                organizationId: user.organizationId as number | undefined,
-                userType: user.userType as string | undefined,
+                id,
+                email,
+                name,
+                username,
+                organizationId,
+                userType,
             },
-        }
-    } catch (err) {
-        console.error("[proxy] JWT verification failed:", err)
-        return null
+        };
+    } catch (error) {
+        console.error("[getProxySession] JWT verification failed:", error);
+        return null;
     }
 }

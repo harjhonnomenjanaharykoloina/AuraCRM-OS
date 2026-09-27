@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
@@ -13,9 +15,10 @@ export default async function RecordPageBuilderPage({
     params: Promise<{ id: string; layoutId: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) return null;
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
 
     const { id, layoutId } = await params;
     const objectId = parseInt(id);
@@ -70,7 +73,7 @@ export default async function RecordPageBuilderPage({
                 <div className="space-y-1">
                     <h1 className="text-2xl font-bold tracking-tight text-slate-900">{layout.name}</h1>
                     <p className="text-sm text-muted-foreground">
-                        {layout.objectDef.label} Record Page
+                        {layout.objectDef.label} {t("admin.objectDetail.recordPage")}
                     </p>
                 </div>
             </div>

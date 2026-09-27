@@ -69,6 +69,18 @@ export default function LoginPage() {
             setIsLoading(false);
         }
     };
+    const signInWithGoogle = async () => {
+        try {
+            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/app/dashboard" });
+            if (result.error) {
+                setError("Could not sign in with Google");
+                toast.error("Could not sign in with Google");
+            }
+        } catch {
+            setError("An unexpected error occurred");
+            toast.error("An unexpected error occurred");
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,7 +107,7 @@ export default function LoginPage() {
                     setError(null);
                 }}
                 ctaHref="/register"
-                ctaLabel="Create an account"
+                onGoogleSignIn={signInWithGoogle}
             />
         </form>
     );

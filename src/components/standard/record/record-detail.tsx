@@ -8,6 +8,7 @@ import Link from "next/link";
 import { RecordForm } from "./record-form";
 import { RelatedList } from "./related-list";
 import { ClaimRecordButton } from "./claim-record-button";
+import { ConvertLeadButton } from "./convert-lead-button";
 import { DeleteRecordButton } from "./delete-record-button";
 import type { LayoutConfigV2 } from "@/lib/record-page-layout";
 import { RecordCommentPanel, type RecordCommentItem } from "./record-comment-panel";
@@ -72,7 +73,7 @@ export function RecordDetail({
     historyLookupLabels = {},
     layoutConfig = null,
     layoutConfigRaw = null,
-    layoutName = null,
+    layoutName: _layoutName = null,
     lookupOptions,
     userOptions,
     queueOptions,
@@ -352,6 +353,12 @@ export function RecordDetail({
                         <div className="flex flex-wrap items-center gap-2">
                             {canClaim && (
                                 <ClaimRecordButton
+                                    objectApiName={record.objectApiName}
+                                    recordId={record.id}
+                                />
+                            )}
+                            {objectDef?.apiName === "lead" && !record.is_converted && canEdit && (
+                                <ConvertLeadButton
                                     objectApiName={record.objectApiName}
                                     recordId={record.id}
                                 />

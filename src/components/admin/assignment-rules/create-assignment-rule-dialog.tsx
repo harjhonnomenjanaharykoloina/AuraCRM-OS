@@ -33,6 +33,8 @@ import { createAssignmentRule } from "@/actions/admin/assignment-rule-actions";
 import { formatDateOnlyForInput, formatDateTimeForInput } from "@/lib/temporal";
 import { Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import type { TFunction } from "@/i18n";
+import { useTranslations } from "@/i18n/client";
 
 type ObjectOption = {
     id: number;
@@ -60,48 +62,44 @@ type FilterState = {
     value: string;
 };
 
-const formSchema = z.object({
-    objectDefId: z.string().min(1, "Object is required"),
-    name: z.string().min(1, "Name is required"),
-    description: z.string().optional(),
-    targetType: z.enum(["USER", "QUEUE"]),
-    targetUserId: z.string().optional(),
-    targetQueueId: z.string().optional(),
-});
+const OPERATOR_KEYS = [
+    { value: "equals", key: "admin.ruleOperators.equals" },
+    { value: "not_equals", key: "admin.ruleOperators.notEquals" },
+    { value: "gt", key: "admin.ruleOperators.greaterThan" },
+    { value: "gte", key: "admin.ruleOperators.greaterOrEqual" },
+    { value: "lt", key: "admin.ruleOperators.lessThan" },
+    { value: "lte", key: "admin.ruleOperators.lessOrEqual" },
+    { value: "contains", key: "admin.ruleOperators.contains" },
+    { value: "not_contains", key: "admin.ruleOperators.doesNotContain" },
+    { value: "is_blank", key: "admin.ruleOperators.isBlank" },
+    { value: "is_not_blank", key: "admin.ruleOperators.isNotBlank" },
+] as const;
 
-const OPERATORS = [
-    { value: "equals", label: "Equals" },
-    { value: "not_equals", label: "Not Equals" },
-    { value: "gt", label: "Greater Than" },
-    { value: "gte", label: "Greater Or Equal" },
-    { value: "lt", label: "Less Than" },
-    { value: "lte", label: "Less Or Equal" },
-    { value: "contains", label: "Contains" },
-    { value: "not_contains", label: "Does Not Contain" },
-    { value: "is_blank", label: "Is Blank" },
-    { value: "is_not_blank", label: "Is Not Blank" },
-];
+function getRuleOperators(t: TFunction) {
+    return OPERATOR_KEYS.map((op) => ({ value: op.value, label: t(op.key) }));
+}
 
 const generateId = () =>
     typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : Math.random().toString(36).slice(2);
 
-function getOperatorOptions(fieldType: string | undefined) {
-    if (!fieldType) return OPERATORS;
+function getOperatorOptions(fieldType: string | undefined, t: TFunction) {
+    const operators = getRuleOperators(t);
+    if (!fieldType) return operators;
     if (fieldType === "Picklist") {
-        return OPERATORS.filter((op) => ["equals", "not_equals", "is_blank", "is_not_blank"].includes(op.value));
+        return operators.filter((op) => ["equals", "not_equals", "is_blank", "is_not_blank"].includes(op.value));
     }
     if (fieldType === "Lookup") {
-        return OPERATORS.filter((op) => ["is_blank", "is_not_blank"].includes(op.value));
+        return operators.filter((op) => ["is_blank", "is_not_blank"].includes(op.value));
     }
     if (["Number"].includes(fieldType)) {
-        return OPERATORS.filter((op) => !["contains", "not_contains"].includes(op.value));
+        return operators.filter((op) => !["contains", "not_contains"].includes(op.value));
     }
     if (fieldType === "Date" || fieldType === "DateTime") {
-        return OPERATORS.filter((op) => !["contains", "not_contains"].includes(op.value));
+        return operators.filter((op) => !["contains", "not_contains"].includes(op.value));
     }
-    return OPERATORS.filter((op) => !["gt", "gte", "lt", "lte"].includes(op.value));
+    return operators.filter((op) => !["gt", "gte", "lt", "lte"].includes(op.value));
 }
 
 function getValueInputType(fieldType?: string) {
@@ -136,10 +134,24 @@ export function CreateAssignmentRuleDialog({
     const [fields, setFields] = useState<FieldOption[]>(initialFields);
     const [loadingFields, setLoadingFields] = useState(false);
     const router = useRouter();
+    const t = useTranslations();
 
     const criteriaFields = useMemo(
         () => fields.filter((field) => !["TextArea", "File"].includes(field.type)),
         [fields]
+    );
+
+    const formSchema = useMemo(
+        () =>
+            z.object({
+                objectDefId: z.string().min(1, t("admin.assignmentRuleCreate.objectRequired")),
+                name: z.string().min(1, t("admin.assignmentRuleCreate.nameRequired")),
+                description: z.string().optional(),
+                targetType: z.enum(["USER", "QUEUE"]),
+                targetUserId: z.string().optional(),
+                targetQueueId: z.string().optional(),
+            }),
+        [t]
     );
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -227,7 +239,7 @@ export function CreateAssignmentRuleDialog({
     async function onSubmit(values: z.infer<typeof formSchema>) {
         const objectDefId = parseInt(values.objectDefId, 10);
         if (Number.isNaN(objectDefId)) {
-            toast.error("Select an object.");
+            toast.error(t("admin.assignmentRuleCreate.selectObjectError"));
             return;
         }
 
@@ -235,11 +247,11 @@ export function CreateAssignmentRuleDialog({
         const targetQueueId = values.targetType === "QUEUE" ? parseInt(values.targetQueueId || "", 10) : null;
 
         if (values.targetType === "USER" && (!targetUserId || Number.isNaN(targetUserId))) {
-            toast.error("Select a target user.");
+            toast.error(t("admin.assignmentRuleCreate.selectTargetUser"));
             return;
         }
         if (values.targetType === "QUEUE" && (!targetQueueId || Number.isNaN(targetQueueId))) {
-            toast.error("Select a target queue.");
+            toast.error(t("admin.assignmentRuleCreate.selectTargetQueue"));
             return;
         }
 
@@ -268,7 +280,7 @@ export function CreateAssignmentRuleDialog({
             });
 
             if (result.success) {
-                toast.success("Assignment rule created");
+                toast.success(t("admin.assignmentRuleCreate.created"));
                 setOpen(false);
                 form.reset();
                 setFilters([]);
@@ -279,7 +291,7 @@ export function CreateAssignmentRuleDialog({
                 toast.error(result.error);
             }
         } catch {
-            toast.error("An unexpected error occurred");
+            toast.error(t("admin.assignmentRuleCreate.unexpectedError"));
         }
     }
 
@@ -288,15 +300,15 @@ export function CreateAssignmentRuleDialog({
             <DialogTrigger asChild>
                 <Button>
                     <Plus className="mr-2 h-4 w-4" />
-                    New Rule
+                    {t("admin.assignmentRuleCreate.newRule")}
                 </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl overflow-hidden p-0">
                 <div className="flex h-full flex-col bg-white">
                     <DialogHeader className="border-b border-border/50 bg-slate-50 px-6 py-4">
-                        <DialogTitle className="text-lg">Create Assignment Rule</DialogTitle>
+                        <DialogTitle className="text-lg">{t("admin.assignmentRuleCreate.title")}</DialogTitle>
                         <DialogDescription>
-                            Apply create-time assignment to a user or queue.
+                            {t("admin.assignmentRuleCreate.description")}
                         </DialogDescription>
                     </DialogHeader>
                     <Form {...form}>
@@ -306,7 +318,7 @@ export function CreateAssignmentRuleDialog({
                         <div className="grid gap-4 md:grid-cols-2">
                             {fixedObject ? (
                                 <div className="space-y-2">
-                                    <FormLabel>Object</FormLabel>
+                                    <FormLabel>{t("admin.assignmentRuleCreate.object")}</FormLabel>
                                     <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm">
                                         {fixedObject.label}
                                     </div>
@@ -317,11 +329,11 @@ export function CreateAssignmentRuleDialog({
                                     name="objectDefId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Object</FormLabel>
+                                            <FormLabel>{t("admin.assignmentRuleCreate.object")}</FormLabel>
                                             <FormControl>
                                                 <Select value={field.value} onValueChange={field.onChange}>
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select object..." />
+                                                        <SelectValue placeholder={t("admin.assignmentRuleCreate.selectObject")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {objects.map((object) => (
@@ -342,9 +354,9 @@ export function CreateAssignmentRuleDialog({
                                 name="name"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Name</FormLabel>
+                                        <FormLabel>{t("admin.assignmentRuleCreate.name")}</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="High-value leads" {...field} />
+                                            <Input placeholder={t("admin.assignmentRuleCreate.placeholderName")} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -357,9 +369,9 @@ export function CreateAssignmentRuleDialog({
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Description</FormLabel>
+                                    <FormLabel>{t("admin.assignmentRuleCreate.descriptionLabel")}</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Optional rule description..." {...field} />
+                                        <Textarea placeholder={t("admin.assignmentRuleCreate.placeholderDescription")} {...field} />
                                     </FormControl>
                                 </FormItem>
                             )}
@@ -371,7 +383,7 @@ export function CreateAssignmentRuleDialog({
                                 name="targetType"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Assign To</FormLabel>
+                                        <FormLabel>{t("admin.assignmentRuleCreate.assignTo")}</FormLabel>
                                         <FormControl>
                                             <Select
                                                 value={field.value}
@@ -385,8 +397,8 @@ export function CreateAssignmentRuleDialog({
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="USER">User</SelectItem>
-                                                    <SelectItem value="QUEUE">Queue</SelectItem>
+                                                    <SelectItem value="USER">{t("admin.assignmentRuleCreate.user")}</SelectItem>
+                                                    <SelectItem value="QUEUE">{t("admin.assignmentRuleCreate.queue")}</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </FormControl>
@@ -401,11 +413,11 @@ export function CreateAssignmentRuleDialog({
                                     name="targetUserId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>User</FormLabel>
+                                            <FormLabel>{t("admin.assignmentRuleCreate.user")}</FormLabel>
                                             <FormControl>
                                                 <Select value={field.value} onValueChange={field.onChange}>
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select user..." />
+                                                        <SelectValue placeholder={t("admin.assignmentRuleCreate.selectUser")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {users.map((user) => (
@@ -425,11 +437,11 @@ export function CreateAssignmentRuleDialog({
                                     name="targetQueueId"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Queue</FormLabel>
+                                            <FormLabel>{t("admin.assignmentRuleCreate.queue")}</FormLabel>
                                             <FormControl>
                                             <Select value={field.value} onValueChange={field.onChange}>
                                                 <SelectTrigger>
-                                                    <SelectValue placeholder="Select queue..." />
+                                                    <SelectValue placeholder={t("admin.assignmentRuleCreate.selectQueue")} />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {queues.map((queue) => (
@@ -448,8 +460,8 @@ export function CreateAssignmentRuleDialog({
 
                         <div className="flex items-center justify-between rounded-lg border p-3">
                             <div>
-                                <p className="text-sm font-medium">Rule Status</p>
-                                <p className="text-xs text-muted-foreground">Toggle to pause this rule.</p>
+                                <p className="text-sm font-medium">{t("admin.assignmentRuleCreate.ruleStatus")}</p>
+                                <p className="text-xs text-muted-foreground">{t("admin.assignmentRuleCreate.togglePause")}</p>
                             </div>
                             <Switch checked={isActive} onCheckedChange={setIsActive} />
                         </div>
@@ -459,33 +471,33 @@ export function CreateAssignmentRuleDialog({
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium">Criteria</p>
+                                    <p className="text-sm font-medium">{t("admin.assignmentRuleCreate.criteria")}</p>
                                     <p className="text-xs text-muted-foreground">
-                                        Leave empty to match all records.
+                                        {t("admin.assignmentRuleCreate.leaveEmpty")}
                                     </p>
                                 </div>
                                 <Button type="button" variant="outline" size="sm" onClick={addFilter}>
                                     <Plus className="mr-2 h-3 w-3" />
-                                    Add Filter
+                                    {t("admin.assignmentRuleCreate.addFilter")}
                                 </Button>
                             </div>
 
                             {filters.length === 0 ? (
                                 <div className="rounded-lg border border-dashed p-4 text-xs text-muted-foreground text-center">
-                                    No filters defined.
+                                    {t("admin.assignmentRuleCreate.noFilters")}
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {filters.map((filter) => {
                                         const field = filter.fieldDefId ? fieldMap.get(filter.fieldDefId) : null;
-                                        const operators = getOperatorOptions(field?.type);
+                                        const operators = getOperatorOptions(field?.type, t);
                                         const needsValue = !["is_blank", "is_not_blank"].includes(filter.operator);
 
                                         return (
                                             <div key={filter.id} className="rounded-lg border p-3 space-y-3">
                                                 <div className="flex items-center justify-between">
                                                     <div className="text-xs font-medium text-muted-foreground">
-                                                        Condition
+                                                        {t("admin.assignmentRuleCreate.condition")}
                                                     </div>
                                                     <Button
                                                         type="button"
@@ -498,7 +510,7 @@ export function CreateAssignmentRuleDialog({
                                                 </div>
                                                 <div className="grid gap-3 md:grid-cols-3">
                                                     <div className="space-y-2">
-                                                        <FormLabel className="text-xs">Field</FormLabel>
+                                                        <FormLabel className="text-xs">{t("admin.assignmentRuleCreate.field")}</FormLabel>
                                                         <Select
                                                             value={filter.fieldDefId ? String(filter.fieldDefId) : ""}
                                                             onValueChange={(value) =>
@@ -507,7 +519,7 @@ export function CreateAssignmentRuleDialog({
                                                             disabled={loadingFields}
                                                         >
                                                             <SelectTrigger>
-                                                                <SelectValue placeholder={loadingFields ? "Loading..." : "Select field"} />
+                                                                <SelectValue placeholder={loadingFields ? t("shared.common.loading") : t("admin.assignmentRuleCreate.selectField")} />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {criteriaFields.map((fieldOption) => (
@@ -519,7 +531,7 @@ export function CreateAssignmentRuleDialog({
                                                         </Select>
                                                     </div>
                                                     <div className="space-y-2">
-                                                        <FormLabel className="text-xs">Operator</FormLabel>
+                                                        <FormLabel className="text-xs">{t("admin.assignmentRuleCreate.operator")}</FormLabel>
                                                         <Select
                                                             value={filter.operator}
                                                             onValueChange={(value) => updateFilter(filter.id, { operator: value })}
@@ -538,13 +550,13 @@ export function CreateAssignmentRuleDialog({
                                                     </div>
                                         {needsValue && field?.type === "Picklist" && (
                                             <div className="space-y-2">
-                                                <FormLabel className="text-xs">Value</FormLabel>
+                                                <FormLabel className="text-xs">{t("admin.assignmentRuleCreate.value")}</FormLabel>
                                                 <Select
                                                     value={filter.value}
                                                     onValueChange={(value) => updateFilter(filter.id, { value })}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select option" />
+                                                        <SelectValue placeholder={t("admin.assignmentRuleCreate.selectOption")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {(field?.picklistOptions || [])
@@ -560,14 +572,14 @@ export function CreateAssignmentRuleDialog({
                                         )}
                                         {needsValue && field?.type !== "Picklist" && (
                                             <div className="space-y-2">
-                                                <FormLabel className="text-xs">Value</FormLabel>
+                                                <FormLabel className="text-xs">{t("admin.assignmentRuleCreate.value")}</FormLabel>
                                                 <Input
                                                     type={getValueInputType(field?.type)}
                                                     value={getValueInputValue(field?.type, filter.value)}
                                                     onChange={(event) =>
                                                         updateFilter(filter.id, { value: event.target.value })
                                                     }
-                                                    placeholder="Enter value"
+                                                    placeholder={t("admin.assignmentRuleCreate.enterValue")}
                                                 />
                                             </div>
                                         )}
@@ -580,14 +592,14 @@ export function CreateAssignmentRuleDialog({
 
                             {filters.length > 1 && (
                                 <div className="flex items-center gap-3">
-                                    <FormLabel className="text-xs">Match Logic</FormLabel>
+                                    <FormLabel className="text-xs">{t("admin.assignmentRuleCreate.matchLogic")}</FormLabel>
                                     <Select value={logic} onValueChange={(value: "ALL" | "ANY") => setLogic(value)}>
                                         <SelectTrigger className="w-[200px]">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="ALL">All conditions (AND)</SelectItem>
-                                            <SelectItem value="ANY">Any condition (OR)</SelectItem>
+                                            <SelectItem value="ALL">{t("admin.assignmentRuleCreate.allConditions")}</SelectItem>
+                                            <SelectItem value="ANY">{t("admin.assignmentRuleCreate.anyCondition")}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -597,7 +609,7 @@ export function CreateAssignmentRuleDialog({
                                 </div>
                             </ScrollArea>
                             <DialogFooter className="border-t border-border/50 bg-slate-50 px-6 py-4">
-                                <Button type="submit">Create Rule</Button>
+                                <Button type="submit">{t("admin.assignmentRuleCreate.createRule")}</Button>
                             </DialogFooter>
                         </form>
                     </Form>

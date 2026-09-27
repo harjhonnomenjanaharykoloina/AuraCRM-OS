@@ -45,6 +45,7 @@ import { updateRecordPageLayout } from "@/actions/admin/record-page-actions";
 import type { LayoutConfigV2 } from "@/lib/record-page-layout";
 import { getVisibilityExpressionValidation, normalizeRecordPageLayoutConfig } from "@/lib/record-page-layout";
 import { formatDateOnlyForInput, formatDateTimeForInput } from "@/lib/temporal";
+import { useTranslations } from "@/i18n/client";
 
 interface FieldLike {
     id: number;
@@ -296,6 +297,7 @@ export function RecordPageBuilder({
     fields,
     permissionSets,
 }: RecordPageBuilderProps) {
+    const t = useTranslations("admin.objects.recordPageBuilder");
     const [isMounted, setIsMounted] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [name, setName] = useState(layoutName);
@@ -372,7 +374,7 @@ export function RecordPageBuilder({
     }, [activeDragId, fieldMap]);
 
     const highlightFields = config.highlights?.fields || [];
-    const layoutNameValue = name.trim();
+    const _layoutNameValue = name.trim();
     const fieldOptions = useMemo<FieldOption[]>(() => {
         const systemOptions: FieldOption[] = [
             { key: "system:permissionSetId", label: "User", type: "PermissionSet" },
@@ -453,7 +455,7 @@ export function RecordPageBuilder({
                 ...prev.sections,
                 {
                     id,
-                    title: "New Section",
+                    title: t("addSection"),
                     columns: 2,
                     items: [],
                 },

@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -18,8 +20,10 @@ import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 
 export default async function DuplicateRulesObjectPage({ params }: { params: Promise<{ objectId: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
     const { objectId } = await params;
     const objectDefId = parseInt(objectId, 10);
 
@@ -57,15 +61,15 @@ export default async function DuplicateRulesObjectPage({ params }: { params: Pro
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{objectDef.label} Duplicate Rules</h1>
-                    <p className="text-sm text-muted-foreground">Rules are evaluated top to bottom during create and edit.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{t("admin.duplicateRuleDetail.title", { objectLabel: objectDef.label })}</h1>
+                    <p className="text-sm text-muted-foreground">{t("admin.duplicateRuleDetail.evaluationNote")}</p>
                 </div>
             </div>
 
             <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Use the arrows to change rule priority order.</div>
+                <div className="text-sm text-muted-foreground">{t("admin.duplicateRuleDetail.orderHelp")}</div>
                 <Button asChild>
-                    <Link href={`/admin/duplicate-rules/${objectDef.id}/new`}>New Rule</Link>
+                    <Link href={`/admin/duplicate-rules/${objectDef.id}/new`}>{t("admin.duplicateRuleDetail.newRule")}</Link>
                 </Button>
             </div>
 
@@ -73,13 +77,13 @@ export default async function DuplicateRulesObjectPage({ params }: { params: Pro
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[120px]">Order</TableHead>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Create</TableHead>
-                            <TableHead>Edit</TableHead>
-                            <TableHead>Fields</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-[180px]">Actions</TableHead>
+                            <TableHead>{t("admin.duplicateRuleDetail.order")}</TableHead>
+                            <TableHead>{t("shared.common.name")}</TableHead>
+                            <TableHead>{t("admin.duplicateRuleDetail.create")}</TableHead>
+                            <TableHead>{t("admin.duplicateRuleDetail.edit")}</TableHead>
+                            <TableHead>{t("admin.duplicateRuleDetail.fields")}</TableHead>
+                            <TableHead>{t("admin.duplicateRuleDetail.status")}</TableHead>
+                            <TableHead className="w-[180px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -101,7 +105,7 @@ export default async function DuplicateRulesObjectPage({ params }: { params: Pro
                                 <TableCell>
                                     {rule.conditions.map((condition) => condition.fieldDef.label).join(", ")}
                                 </TableCell>
-                                <TableCell>{rule.isActive ? "Active" : "Inactive"}</TableCell>
+                                <TableCell>{rule.isActive ? t("shared.status.active") : t("shared.status.inactive")}</TableCell>
                                 <TableCell>
                                     <DuplicateRuleActions ruleId={rule.id} isActive={rule.isActive} />
                                 </TableCell>
@@ -110,7 +114,7 @@ export default async function DuplicateRulesObjectPage({ params }: { params: Pro
                         {rules.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                                    No duplicate rules yet. Create one to get started.
+                                    {t("admin.duplicateRuleDetail.noRulesYet")}
                                 </TableCell>
                             </TableRow>
                         )}

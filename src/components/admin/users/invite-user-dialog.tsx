@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import { inviteUser } from "@/actions/admin/user-actions";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { passwordSchema } from "@/lib/password-validation";
 
 const formSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -43,7 +44,7 @@ const formSchema = z.object({
         .min(3, "Username must be at least 3 characters")
         .regex(/^[a-z0-9]+$/, "Username must be lowercase letters and numbers only"),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: passwordSchema,
     userType: z.enum(["standard", "admin"]),
 });
 
@@ -74,7 +75,7 @@ export function InviteUserDialog() {
             } else {
                 toast.error(result.error);
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         }
     }

@@ -159,6 +159,7 @@ export async function findDuplicateMatches(input: FindDuplicateMatchesInput) {
             where: {
                 organizationId: input.organizationId,
                 objectDefId: input.objectDefId,
+                isDeleted: false,
                 id: { in: Array.from(candidateIds) },
             },
             select: {
@@ -231,6 +232,7 @@ export async function findDuplicateMatches(input: FindDuplicateMatchesInput) {
                     id: { in: matchedRecordIds },
                     organizationId: input.organizationId,
                     objectDefId: input.objectDefId,
+                    isDeleted: false,
                     ...buildRecordAccessFilter(input.userId, input.queueIds, input.userGroupId, "read"),
                 },
                 select: { id: true },
@@ -256,6 +258,7 @@ export async function findDuplicateMatches(input: FindDuplicateMatchesInput) {
                 id: { in: visibleMatches.map((match) => match.recordId) },
                 organizationId: input.organizationId,
                 objectDefId: input.objectDefId,
+                isDeleted: false,
             },
             select: { id: true, name: true },
         });

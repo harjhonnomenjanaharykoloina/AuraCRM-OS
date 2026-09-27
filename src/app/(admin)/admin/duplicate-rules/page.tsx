@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { db } from "@/lib/db";
+import { getT } from "@/i18n/server";
 import Link from "next/link";
 import { Copy, Layers, ShieldAlert, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +17,10 @@ import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
 
 export default async function DuplicateRulesPage() {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
 
     const [objects, duplicateRuleCounts] = await Promise.all([
         db.objectDefinition.findMany({
@@ -53,16 +57,16 @@ export default async function DuplicateRulesPage() {
                             <Copy className="h-6 w-6" />
                         </span>
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Duplicate Rules</h1>
+                            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t("admin.duplicateRules.title")}</h1>
                             <p className="text-sm text-slate-600">
-                                Detect likely duplicate records before messy data spreads.
+                                {t("admin.duplicateRules.listDescription")}
                             </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Warn or block</Badge>
-                        <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">Object-specific</Badge>
-                        <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">Multi-field matching</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">{t("admin.duplicateRules.badges.warnOrBlock")}</Badge>
+                        <Badge className="bg-cyan-100 text-cyan-800 hover:bg-cyan-100">{t("admin.duplicateRules.badges.objectSpecific")}</Badge>
+                        <Badge className="bg-slate-100 text-slate-800 hover:bg-slate-100">{t("admin.duplicateRules.badges.multiFieldMatching")}</Badge>
                     </div>
                 </div>
             </div>
@@ -74,8 +78,8 @@ export default async function DuplicateRulesPage() {
                             <Sparkles className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Data Quality</p>
-                            <p className="text-xs text-slate-600">Catch duplicates before users create more noise.</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.duplicateRules.features.dataQuality.title")}</p>
+                            <p className="text-xs text-slate-600">{t("admin.duplicateRules.features.dataQuality.description")}</p>
                         </div>
                     </div>
                 </div>
@@ -85,8 +89,8 @@ export default async function DuplicateRulesPage() {
                             <Layers className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Field Combos</p>
-                            <p className="text-xs text-slate-600">Combine two or more exact-match fields into one rule.</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.duplicateRules.features.fieldCombos.title")}</p>
+                            <p className="text-xs text-slate-600">{t("admin.duplicateRules.features.fieldCombos.description")}</p>
                         </div>
                     </div>
                 </div>
@@ -96,8 +100,8 @@ export default async function DuplicateRulesPage() {
                             <ShieldAlert className="h-5 w-5" />
                         </span>
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">Safe Enforcement</p>
-                            <p className="text-xs text-slate-600">Warnings and blocks still respect record visibility.</p>
+                            <p className="text-sm font-semibold text-slate-900">{t("admin.duplicateRules.features.safeEnforcement.title")}</p>
+                            <p className="text-xs text-slate-600">{t("admin.duplicateRules.features.safeEnforcement.description")}</p>
                         </div>
                     </div>
                 </div>
@@ -107,9 +111,9 @@ export default async function DuplicateRulesPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Object</TableHead>
-                            <TableHead>Rules</TableHead>
-                            <TableHead className="w-[140px]">Actions</TableHead>
+                            <TableHead>{t("admin.duplicateRules.table.object")}</TableHead>
+                            <TableHead>{t("admin.duplicateRules.table.rules")}</TableHead>
+                            <TableHead className="w-[140px]">{t("admin.duplicateRules.table.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -119,7 +123,7 @@ export default async function DuplicateRulesPage() {
                                 <TableCell>{countByObjectId.get(object.id) ?? 0}</TableCell>
                                 <TableCell>
                                     <Link href={`/admin/duplicate-rules/${object.id}`} className="text-sm text-primary hover:underline">
-                                        Manage
+                                        {t("admin.duplicateRules.table.manage")}
                                     </Link>
                                 </TableCell>
                             </TableRow>
@@ -127,7 +131,7 @@ export default async function DuplicateRulesPage() {
                         {objects.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={3} className="py-8 text-center text-muted-foreground">
-                                    No objects found. Create an object first.
+                                    {t("admin.duplicateRules.table.noObjects")}
                                 </TableCell>
                             </TableRow>
                         )}

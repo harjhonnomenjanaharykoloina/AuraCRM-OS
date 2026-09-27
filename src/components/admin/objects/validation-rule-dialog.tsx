@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDateOnlyForInput, formatDateTimeForInput } from "@/lib/temporal";
 import { Info, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 
 type FieldOption = {
     id: number;
@@ -171,6 +172,8 @@ export function ValidationRuleDialog({
     onSubmit,
     isSubmitting,
 }: ValidationRuleDialogProps) {
+    const t = useTranslations("admin.objects.validationRuleDialog");
+
     const criteriaFields = useMemo(
         () => fields.filter((field) => !["File"].includes(field.type)),
         [fields]
@@ -264,36 +267,36 @@ export function ValidationRuleDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle>{initialValues ? "Edit Validation Rule" : "New Validation Rule"}</DialogTitle>
+                    <DialogTitle>{initialValues ? t("title.edit") : t("title.create")}</DialogTitle>
                 </DialogHeader>
                 <TooltipProvider>
                     <div className="grid gap-6 py-4">
                         <div className="grid gap-2">
-                            <Label>Name</Label>
+                            <Label>{t("nameLabel")}</Label>
                             <Input
                                 value={formState.name}
                                 onChange={(event) => updateField("name", event.target.value)}
-                                placeholder="Opportunity must have Amount"
+                                placeholder={t("namePlaceholder")}
                             />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Description</Label>
+                            <Label>{t("descriptionLabel")}</Label>
                             <Textarea
                                 value={formState.description || ""}
                                 onChange={(event) => updateField("description", event.target.value)}
-                                placeholder="Explain why this validation exists."
+                                placeholder={t("descriptionPlaceholder")}
                             />
                         </div>
 
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                                <Label>Match Logic</Label>
+                                <Label>{t("matchLogicLabel")}</Label>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Info className="h-4 w-4 text-muted-foreground" />
                                     </TooltipTrigger>
                                     <TooltipContent className="max-w-sm text-sm">
-                                        Choose how multiple conditions are evaluated. All = every condition must be true; Any = any single condition triggers the error.
+                                        {t("matchLogicTooltip")}
                                     </TooltipContent>
                                 </Tooltip>
                             </div>
@@ -599,10 +602,10 @@ export function ValidationRuleDialog({
                 </TooltipProvider>
                 <div className="flex justify-end gap-2">
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        Cancel
+                        {t("cancel")}
                     </Button>
                     <Button onClick={handleSubmit} disabled={isSaveDisabled || isSubmitting}>
-                        {isSubmitting ? "Saving..." : "Save Rule"}
+                        {isSubmitting ? t("saving") : t("saveRule")}
                     </Button>
                 </div>
             </DialogContent>

@@ -1,0 +1,8 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/scratch_check.tsx"],
+  "compilerOptions": {
+    "noEmit": true,
+    "noEmitOnError": true
+  }
+}

@@ -10,6 +10,8 @@ import { mockDb, resetMockDb } from "@/tests/utils/prisma-mock";
 describe("permissions", () => {
     beforeEach(() => {
         resetMockDb();
+        mockDb.permissionSetGroupAssignment.findMany.mockResolvedValue([]);
+        mockDb.permissionSetGroupMember.findMany.mockResolvedValue([]);
     });
 
     it("returns direct permission set ids", async () => {
@@ -20,6 +22,22 @@ describe("permissions", () => {
 
         const result = await getUserPermissionSetIds(1);
         expect(result).toEqual([10, 11]);
+    });
+
+    it("includes group-based permission set ids, deduplicated", async () => {
+        mockDb.permissionSetAssignment.findMany.mockResolvedValue([
+            { permissionSetId: 10 },
+        ]);
+        mockDb.permissionSetGroupAssignment.findMany.mockResolvedValue([
+            { permissionSetGroupId: 1 },
+        ]);
+        mockDb.permissionSetGroupMember.findMany.mockResolvedValue([
+            { permissionSetId: 20 },
+            { permissionSetId: 10 },
+        ]);
+
+        const result = await getUserPermissionSetIds(1);
+        expect(result.sort((a, b) => a - b)).toEqual([10, 20]);
     });
 
     it("checkPermission returns false when no permission sets", async () => {

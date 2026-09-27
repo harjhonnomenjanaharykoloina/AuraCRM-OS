@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write  # for Semgrep
+    outputs:
+      # Exposed for downstream Railway deployment jobs.
+      NEXT_PUBLIC_APP_URL: ${{ steps.build.outputs.app_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Run linting
+        run: pnpm lint
+      - name: Type check
+        run: pnpm typecheck
+      - name: Run unit tests
+        run: pnpm test:unit
+      - name: Build
+        id: build
+        run: pnpm build
+      - name: Run secret scan
+        run: bash scripts/scan-secrets.sh
+      - name: Semgrep Scan
+        uses: returntocorp/semgrep@v1
+        with:
+          config: p/ci
+          publishDef: false
+      - name: Dependency audit
+        run: pnpm audit --audit-level=high || true

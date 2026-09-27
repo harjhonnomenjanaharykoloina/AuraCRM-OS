@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { CreateObjectDialog } from "@/components/admin/objects/create-object-dialog";
 import {
@@ -19,8 +21,10 @@ import { RebuildDependencyIndexButton } from "@/components/admin/objects/rebuild
 
 export default async function ObjectsPage() {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
 
     const objects = await db.objectDefinition.findMany({
         where: { organizationId },
@@ -31,9 +35,9 @@ export default async function ObjectsPage() {
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Object Manager</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t("admin.sidebar.objectManager")}</h1>
                     <p className="text-muted-foreground">
-                        Manage standard and custom objects for your organization.
+                        {t("admin.objects.description")}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -47,11 +51,11 @@ export default async function ObjectsPage() {
                     <TableHeader className="bg-slate-50">
                         <TableRow>
                             <TableHead className="w-[50px]"></TableHead>
-                            <TableHead>Label</TableHead>
-                            <TableHead>API Name</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead className="hidden md:table-cell">Description</TableHead>
-                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                            <TableHead>{t("shared.common.label")}</TableHead>
+                            <TableHead>{t("shared.common.apiName")}</TableHead>
+                            <TableHead>{t("shared.common.type")}</TableHead>
+                            <TableHead className="hidden md:table-cell">{t("shared.common.description")}</TableHead>
+                            <TableHead className="w-[100px] text-right">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -72,7 +76,7 @@ export default async function ObjectsPage() {
                                     <TableCell className="font-mono text-xs text-slate-500">{obj.apiName}</TableCell>
                                     <TableCell>
                                         <Badge variant={obj.isSystem ? "secondary" : "outline"} className={cn("font-normal", obj.isSystem ? "bg-slate-100 text-slate-600" : "bg-white text-slate-600 border-slate-200")}>
-                                            {obj.isSystem ? "Standard" : "Custom"}
+                                            {obj.isSystem ? t("admin.objects.tabs.standard") : t("admin.objects.tabs.custom")}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm max-w-[300px] truncate">
@@ -95,7 +99,7 @@ export default async function ObjectsPage() {
                                         <div className="h-12 w-12 bg-slate-50 rounded-full flex items-center justify-center mb-2">
                                             <Icons.Box className="h-6 w-6 text-slate-300" />
                                         </div>
-                                        <p>No objects found. Create one to get started.</p>
+                                        <p>{t("admin.objects.noObjectsFound")}</p>
                                     </div>
                                 </TableCell>
                             </TableRow>

@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { SharingRuleForm } from "@/components/admin/sharing-rules/sharing-rule-form";
@@ -12,8 +14,10 @@ export default async function SharingRuleCreatePage({
     params: Promise<{ objectId: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
     const { objectId } = await params;
     const objectDefId = parseInt(objectId, 10);
 
@@ -59,8 +63,8 @@ export default async function SharingRuleCreatePage({
                     </Link>
                 </Button>
                 <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Sharing Rules</p>
-                    <h1 className="text-2xl font-bold tracking-tight">Create rule for {objectDef.label}</h1>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("admin.sharingRuleDetail.subtitle")}</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{t("admin.sharingRuleDetail.createRule", { objectLabel: objectDef.label })}</h1>
                 </div>
             </div>
 

@@ -3,14 +3,18 @@
 import { useBuilderStore } from "./builder-store";
 import { Button } from "@/components/ui/button";
 import { BarChart3, Calculator, List } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 
 export function WidgetToolbox() {
+    const t = useTranslations();
     const { addWidget } = useBuilderStore();
 
     return (
         <div className="p-4 space-y-4">
             <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Core Widgets</p>
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    {t("admin.builder.coreWidgets")}
+                </p>
 
                 <Button
                     variant="outline"
@@ -21,8 +25,8 @@ export function WidgetToolbox() {
                         <Calculator className="h-5 w-5" />
                     </div>
                     <div className="text-left">
-                        <span className="block font-medium text-slate-700">Metric Card</span>
-                        <span className="text-xs text-muted-foreground block">KPIs, Counts, Sums</span>
+                        <span className="block font-medium text-slate-700">{t("admin.builder.metricCard")}</span>
+                        <span className="text-xs text-muted-foreground block">{t("admin.builder.metricDesc")}</span>
                     </div>
                 </Button>
 
@@ -35,8 +39,8 @@ export function WidgetToolbox() {
                         <BarChart3 className="h-5 w-5" />
                     </div>
                     <div className="text-left">
-                        <span className="block font-medium text-slate-700">Chart Widget</span>
-                        <span className="text-xs text-muted-foreground block">Bar, Line, Pie</span>
+                        <span className="block font-medium text-slate-700">{t("admin.builder.chartWidget")}</span>
+                        <span className="text-xs text-muted-foreground block">{t("admin.builder.chartDesc")}</span>
                     </div>
                 </Button>
 
@@ -49,8 +53,8 @@ export function WidgetToolbox() {
                         <List className="h-5 w-5" />
                     </div>
                     <div className="text-left">
-                        <span className="block font-medium text-slate-700">List Widget</span>
-                        <span className="text-xs text-muted-foreground block">Recent Records</span>
+                        <span className="block font-medium text-slate-700">{t("admin.builder.listWidget")}</span>
+                        <span className="text-xs text-muted-foreground block">{t("admin.builder.listDesc")}</span>
                     </div>
                 </Button>
             </div>

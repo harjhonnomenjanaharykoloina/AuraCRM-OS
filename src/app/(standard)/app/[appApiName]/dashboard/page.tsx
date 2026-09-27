@@ -5,6 +5,7 @@ import { MetricWidget } from "@/components/standard/dashboard/metric-widget";
 import { ListWidget } from "@/components/standard/dashboard/list-widget";
 import { ChartWidget } from "@/components/standard/dashboard/chart-widget";
 import { checkPermission } from "@/lib/permissions";
+import { getMessages, getT } from "@/i18n/server";
 
 export default async function DashboardPage({
     params,
@@ -17,6 +18,9 @@ export default async function DashboardPage({
     if (!session) {
         redirect("/login");
     }
+
+    const messages = await getMessages();
+    const t = await getT(messages);
 
     const app = await db.appDefinition.findUnique({
         where: {
@@ -34,7 +38,7 @@ export default async function DashboardPage({
     });
 
     if (!app) {
-        return <div>App not found</div>;
+        return <div>{t("standard.pages.dashboard.appNotFound")}</div>;
     }
 
     // Filter widgets based on object permissions
@@ -61,7 +65,7 @@ export default async function DashboardPage({
 
     return (
         <div className="space-y-8">
-      
+            <h1 className="text-2xl font-bold tracking-tight">{t("standard.pages.dashboard.title")}</h1>
 
             <div className="grid gap-6 grid-cols-1 md:grid-cols-12">
                 {/* Dynamic Widgets */}

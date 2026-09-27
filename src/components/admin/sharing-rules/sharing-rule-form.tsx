@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { createSharingRule, updateSharingRule } from "@/actions/admin/sharing-rule-actions";
 import { validateCustomLogicExpressionInput } from "@/lib/validation/rule-logic";
 import { formatDateOnlyForInput, formatDateTimeForInput } from "@/lib/temporal";
+import type { TFunction } from "@/i18n";
+import { useTranslations } from "@/i18n/client";
 
 type FieldOption = {
     id: number;
@@ -83,18 +85,22 @@ type SharingRuleFormProps = {
     backHref: string;
 };
 
-const OPERATORS = [
-    { value: "equals", label: "Equals" },
-    { value: "not_equals", label: "Not Equals" },
-    { value: "gt", label: "Greater Than" },
-    { value: "gte", label: "Greater Or Equal" },
-    { value: "lt", label: "Less Than" },
-    { value: "lte", label: "Less Or Equal" },
-    { value: "contains", label: "Contains" },
-    { value: "not_contains", label: "Does Not Contain" },
-    { value: "is_blank", label: "Is Blank" },
-    { value: "is_not_blank", label: "Is Not Blank" },
-];
+const OPERATOR_KEYS = [
+    { value: "equals", key: "admin.ruleOperators.equals" },
+    { value: "not_equals", key: "admin.ruleOperators.notEquals" },
+    { value: "gt", key: "admin.ruleOperators.greaterThan" },
+    { value: "gte", key: "admin.ruleOperators.greaterOrEqual" },
+    { value: "lt", key: "admin.ruleOperators.lessThan" },
+    { value: "lte", key: "admin.ruleOperators.lessOrEqual" },
+    { value: "contains", key: "admin.ruleOperators.contains" },
+    { value: "not_contains", key: "admin.ruleOperators.doesNotContain" },
+    { value: "is_blank", key: "admin.ruleOperators.isBlank" },
+    { value: "is_not_blank", key: "admin.ruleOperators.isNotBlank" },
+] as const;
+
+function getBaseOperators(t: TFunction) {
+    return OPERATOR_KEYS.map((op) => ({ value: op.value, label: t(op.key) }));
+}
 
 const OWNER_GROUP_OPERATORS = new Set(["equals", "not_equals", "is_blank", "is_not_blank"]);
 
@@ -125,24 +131,25 @@ function getValueInputValue(fieldType: string | undefined, value: string) {
     return value;
 }
 
-function getOperatorOptions(fieldType: string | undefined, isOwnerGroup: boolean) {
+function getOperatorOptions(fieldType: string | undefined, isOwnerGroup: boolean, t: TFunction) {
+    const operators = getBaseOperators(t);
     if (isOwnerGroup) {
-        return OPERATORS.filter((op) => OWNER_GROUP_OPERATORS.has(op.value));
+        return operators.filter((op) => OWNER_GROUP_OPERATORS.has(op.value));
     }
-    if (!fieldType) return OPERATORS;
+    if (!fieldType) return operators;
     if (fieldType === "Picklist") {
-        return OPERATORS.filter((op) => ["equals", "not_equals", "is_blank", "is_not_blank"].includes(op.value));
+        return operators.filter((op) => ["equals", "not_equals", "is_blank", "is_not_blank"].includes(op.value));
     }
     if (fieldType === "Lookup") {
-        return OPERATORS.filter((op) => ["is_blank", "is_not_blank"].includes(op.value));
+        return operators.filter((op) => ["is_blank", "is_not_blank"].includes(op.value));
     }
     if (["Number"].includes(fieldType)) {
-        return OPERATORS.filter((op) => !["contains", "not_contains"].includes(op.value));
+        return operators.filter((op) => !["contains", "not_contains"].includes(op.value));
     }
     if (fieldType === "Date" || fieldType === "DateTime") {
-        return OPERATORS.filter((op) => !["contains", "not_contains"].includes(op.value));
+        return operators.filter((op) => !["contains", "not_contains"].includes(op.value));
     }
-    return OPERATORS.filter((op) => !["gt", "gte", "lt", "lte"].includes(op.value));
+    return operators.filter((op) => !["gt", "gte", "lt", "lte"].includes(op.value));
 }
 
 export function SharingRuleForm({
@@ -154,6 +161,7 @@ export function SharingRuleForm({
     backHref,
 }: SharingRuleFormProps) {
     const router = useRouter();
+    const t = useTranslations();
 
     const [name, setName] = useState(initial?.name ?? "");
     const [description, setDescription] = useState(initial?.description ?? "");
@@ -194,7 +202,7 @@ export function SharingRuleForm({
         const systemFields = [
             {
                 key: "system:ownerGroupId",
-                label: "Owner Group",
+                label: t("admin.sharingRuleForm.ownerGroup"),
                 fieldType: "OwnerGroup",
                 fieldApiName: "ownerGroupId",
                 system: true,
@@ -210,7 +218,7 @@ export function SharingRuleForm({
             system: false,
         }));
         return [...systemFields, ...objectFields];
-    }, [criteriaFields]);
+    }, [criteriaFields, t]);
 
     const fieldOptionMap = useMemo(
         () => new Map(fieldOptions.map((option) => [option.key, option])),
@@ -227,12 +235,12 @@ export function SharingRuleForm({
         const result = validateCustomLogicExpressionInput(expression, filters.length);
         if (!result.valid) {
             if (result.message === "Expression references a condition number that does not exist.") {
-                return { valid: false, message: `Use condition numbers between 1 and ${filters.length}.` };
+                return { valid: false, message: t("admin.ruleCommon.useConditionNumbers", { count: filters.length }) };
             }
             return { valid: false, message: result.message };
         }
         return { valid: true, message: "" };
-    }, [logic, expression, filters.length]);
+    }, [logic, expression, filters.length, t]);
 
     const addFilter = () => {
         setFilters((prev) => [
@@ -256,15 +264,15 @@ export function SharingRuleForm({
 
     const handleSubmit = async () => {
         if (!name.trim()) {
-            toast.error("Name is required.");
+            toast.error(t("admin.sharingRuleForm.nameRequired"));
             return;
         }
         if (!targetGroupId) {
-            toast.error("Select a target group.");
+            toast.error(t("admin.sharingRuleForm.selectTargetGroup"));
             return;
         }
         if (logic === "CUSTOM" && !customLogicValidation.valid) {
-            toast.error(customLogicValidation.message || "Fix the custom logic expression.");
+            toast.error(customLogicValidation.message || t("admin.sharingRuleForm.fixCustomLogic"));
             return;
         }
 
@@ -308,11 +316,11 @@ export function SharingRuleForm({
                 : await updateSharingRule(initial?.id ?? 0, payload);
 
         if (!result.success) {
-            toast.error(result.error || "Failed to save sharing rule.");
+            toast.error(result.error || t("admin.sharingRuleForm.saveError"));
             return;
         }
 
-        toast.success(mode === "create" ? "Sharing rule created." : "Sharing rule updated.");
+        toast.success(mode === "create" ? t("admin.sharingRuleForm.created") : t("admin.sharingRuleForm.updated"));
         router.push(backHref);
         router.refresh();
     };
@@ -322,26 +330,26 @@ export function SharingRuleForm({
             <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div className="space-y-1">
-                        <CardTitle>{mode === "create" ? "New sharing rule" : "Edit sharing rule"}</CardTitle>
+                        <CardTitle>{mode === "create" ? t("admin.sharingRuleForm.newRule") : t("admin.sharingRuleForm.editRule")}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                            Share records from <span className="font-medium text-foreground">{objectDef.label}</span> with a group when criteria match.
+                            {t("admin.sharingRuleForm.subtitle", { objectLabel: objectDef.label })}
                         </p>
                     </div>
-                    <Badge variant={isActive ? "default" : "secondary"}>{isActive ? "Active" : "Inactive"}</Badge>
+                    <Badge variant={isActive ? "default" : "secondary"}>{isActive ? t("shared.status.active") : t("shared.status.inactive")}</Badge>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                        <Label>Rule name</Label>
-                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Share high-value records" />
+                        <Label>{t("admin.sharingRuleForm.ruleName")}</Label>
+                        <Input value={name} onChange={(event) => setName(event.target.value)} placeholder={t("admin.sharingRuleForm.ruleNamePlaceholder")} />
                     </div>
                     <div className="space-y-2">
-                        <Label>Target group</Label>
+                        <Label>{t("admin.sharingRuleForm.targetGroup")}</Label>
                         <Select
                             value={targetGroupId ? String(targetGroupId) : undefined}
                             onValueChange={(value) => setTargetGroupId(Number(value))}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="Select group..." />
+                                <SelectValue placeholder={t("admin.sharingRuleForm.selectGroup")} />
                             </SelectTrigger>
                             <SelectContent>
                                 {groups.map((group) => (
@@ -353,30 +361,30 @@ export function SharingRuleForm({
                         </Select>
                     </div>
                     <div className="space-y-2 md:col-span-2">
-                        <Label>Description</Label>
+                        <Label>{t("admin.sharingRuleForm.description")}</Label>
                         <Textarea
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
-                            placeholder="Optional description"
+                            placeholder={t("admin.sharingRuleForm.descriptionPlaceholder")}
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Access level</Label>
+                        <Label>{t("admin.sharingRuleForm.accessLevel")}</Label>
                         <Select value={accessLevel} onValueChange={(value) => setAccessLevel(value as "READ" | "EDIT" | "DELETE")}>
                             <SelectTrigger>
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="READ">Read</SelectItem>
-                                <SelectItem value="EDIT">Edit</SelectItem>
-                                <SelectItem value="DELETE">Edit/Delete</SelectItem>
+                                <SelectItem value="READ">{t("admin.sharingRuleForm.accessRead")}</SelectItem>
+                                <SelectItem value="EDIT">{t("admin.sharingRuleForm.accessEdit")}</SelectItem>
+                                <SelectItem value="DELETE">{t("admin.sharingRuleForm.accessEditDelete")}</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
                     <div className="flex items-center justify-between rounded-xl border bg-muted/30 px-4 py-3">
                         <div>
-                            <p className="text-sm font-medium">Rule status</p>
-                            <p className="text-xs text-muted-foreground">Pause this rule without deleting it.</p>
+                            <p className="text-sm font-medium">{t("admin.sharingRuleForm.ruleStatus")}</p>
+                            <p className="text-xs text-muted-foreground">{t("admin.sharingRuleForm.pauseHint")}</p>
                         </div>
                         <Switch checked={isActive} onCheckedChange={setIsActive} />
                     </div>
@@ -386,20 +394,20 @@ export function SharingRuleForm({
             <Card className="shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div className="space-y-1">
-                        <CardTitle>Criteria</CardTitle>
+                        <CardTitle>{t("admin.sharingRuleForm.criteria")}</CardTitle>
                         <p className="text-sm text-muted-foreground">
-                            Leave empty to share all records. Conditions are numbered for custom logic.
+                            {t("admin.sharingRuleForm.criteriaHint")}
                         </p>
                     </div>
                     <Button type="button" variant="outline" size="sm" onClick={addFilter} className="gap-2">
                         <Plus className="h-4 w-4" />
-                        Add condition
+                        {t("admin.sharingRuleForm.addCondition")}
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {filters.length === 0 ? (
                         <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                            No conditions added. This rule will match every record.
+                            {t("admin.sharingRuleForm.noConditions")}
                         </div>
                     ) : (
                         <div className="space-y-3">
@@ -407,13 +415,13 @@ export function SharingRuleForm({
                                 const option = fieldOptionMap.get(filter.fieldKey);
                                 const fieldType = option?.fieldType;
                                 const isOwnerGroup = option?.system && option?.key === "system:ownerGroupId";
-                                const operators = getOperatorOptions(fieldType, Boolean(isOwnerGroup));
+                                const operators = getOperatorOptions(fieldType, Boolean(isOwnerGroup), t);
                                 const needsValue = !["is_blank", "is_not_blank"].includes(filter.operator);
 
                                 return (
                                     <div key={filter.id} className="rounded-xl border bg-card/70 p-4 shadow-sm">
                                         <div className="flex items-center justify-between">
-                                            <Badge variant="outline">Condition {index + 1}</Badge>
+                                            <Badge variant="outline">{t("admin.sharingRuleForm.condition", { count: index + 1 })}</Badge>
                                             <Button
                                                 type="button"
                                                 variant="ghost"
@@ -425,7 +433,7 @@ export function SharingRuleForm({
                                         </div>
                                         <div className="mt-4 grid gap-3 md:grid-cols-3">
                                             <div className="space-y-2">
-                                                <Label className="text-xs">Field</Label>
+                                                <Label className="text-xs">{t("admin.sharingRuleForm.field")}</Label>
                                                 <Select
                                                     value={filter.fieldKey}
                                                     onValueChange={(value) =>
@@ -433,7 +441,7 @@ export function SharingRuleForm({
                                                     }
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="Select field" />
+                                                        <SelectValue placeholder={t("admin.sharingRuleForm.selectField")} />
                                                     </SelectTrigger>
                                                     <SelectContent>
                                                         {fieldOptions.map((fieldOption) => (
@@ -445,7 +453,7 @@ export function SharingRuleForm({
                                                 </Select>
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-xs">Operator</Label>
+                                                <Label className="text-xs">{t("admin.sharingRuleForm.operator")}</Label>
                                                 <Select
                                                     value={filter.operator}
                                                     onValueChange={(value) => updateFilter(filter.id, { operator: value })}
@@ -464,13 +472,13 @@ export function SharingRuleForm({
                                             </div>
                                             {needsValue && isOwnerGroup && (
                                                 <div className="space-y-2">
-                                                    <Label className="text-xs">Group</Label>
+                                                    <Label className="text-xs">{t("admin.sharingRuleForm.group")}</Label>
                                                     <Select
                                                         value={filter.value}
                                                         onValueChange={(value) => updateFilter(filter.id, { value })}
                                                     >
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Select group" />
+                                                            <SelectValue placeholder={t("admin.sharingRuleForm.selectGroupValue")} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {groups.map((group) => (
@@ -484,13 +492,13 @@ export function SharingRuleForm({
                                             )}
                                             {needsValue && !isOwnerGroup && fieldType === "Picklist" && (
                                                 <div className="space-y-2">
-                                                    <Label className="text-xs">Value</Label>
+                                                    <Label className="text-xs">{t("admin.sharingRuleForm.value")}</Label>
                                                     <Select
                                                         value={filter.value}
                                                         onValueChange={(value) => updateFilter(filter.id, { value })}
                                                     >
                                                         <SelectTrigger>
-                                                            <SelectValue placeholder="Select option" />
+                                                            <SelectValue placeholder={t("admin.sharingRuleForm.selectOption")} />
                                                         </SelectTrigger>
                                                         <SelectContent>
                                                             {(option?.picklistOptions || [])
@@ -506,20 +514,20 @@ export function SharingRuleForm({
                                             )}
                                             {needsValue && !isOwnerGroup && fieldType !== "Picklist" && (
                                                 <div className="space-y-2">
-                                                    <Label className="text-xs">Value</Label>
+                                                    <Label className="text-xs">{t("admin.sharingRuleForm.value")}</Label>
                                                     <Input
                                                         type={getValueInputType(fieldType)}
                                                         value={getValueInputValue(fieldType, filter.value)}
                                                         onChange={(event) =>
                                                             updateFilter(filter.id, { value: event.target.value })
                                                         }
-                                                        placeholder="Enter value"
+                                                        placeholder={t("admin.sharingRuleForm.enterValue")}
                                                     />
                                                 </div>
                                             )}
                                             {!needsValue && (
                                                 <div className="text-xs text-muted-foreground flex items-center">
-                                                    No value required
+                                                    {t("admin.sharingRuleForm.noValueRequired")}
                                                 </div>
                                             )}
                                         </div>
@@ -534,7 +542,7 @@ export function SharingRuleForm({
                     <div className="space-y-3">
                         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                             <Info className="h-4 w-4 text-muted-foreground" />
-                            Match logic
+                            {t("admin.sharingRuleForm.matchLogic")}
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <Button
@@ -542,36 +550,36 @@ export function SharingRuleForm({
                                 variant={logic === "ALL" ? "default" : "outline"}
                                 onClick={() => setLogic("ALL")}
                             >
-                                All conditions (AND)
+                                {t("admin.sharingRuleForm.allConditions")}
                             </Button>
                             <Button
                                 type="button"
                                 variant={logic === "ANY" ? "default" : "outline"}
                                 onClick={() => setLogic("ANY")}
                             >
-                                Any condition (OR)
+                                {t("admin.sharingRuleForm.anyCondition")}
                             </Button>
                             <Button
                                 type="button"
                                 variant={logic === "CUSTOM" ? "default" : "outline"}
                                 onClick={() => setLogic("CUSTOM")}
                             >
-                                Custom expression
+                                {t("admin.sharingRuleForm.customExpression")}
                             </Button>
                         </div>
                         {logic === "CUSTOM" && (
                             <div className="space-y-2">
-                                <Label>Custom logic</Label>
+                                <Label>{t("admin.sharingRuleForm.customLogic")}</Label>
                                 <Textarea
                                     value={expression}
                                     onChange={(event) => setExpression(event.target.value)}
-                                    placeholder="(1 AND 2) OR 3"
+                                    placeholder={t("admin.sharingRuleForm.customLogicPlaceholder")}
                                 />
                                 {!customLogicValidation.valid && (
                                     <p className="text-xs text-destructive">{customLogicValidation.message}</p>
                                 )}
                                 <p className="text-xs text-muted-foreground">
-                                    Use condition numbers with AND/OR/NOT. Parentheses are supported.
+                                    {t("admin.sharingRuleForm.customLogicHelp")}
                                 </p>
                             </div>
                         )}
@@ -581,14 +589,14 @@ export function SharingRuleForm({
 
             <div className="flex items-center justify-between rounded-lg border bg-muted/20 px-4 py-3">
                 <p className="text-xs text-muted-foreground">
-                    Sharing rules apply only to user-owned records. Queue-owned records are not shared.
+                    {t("admin.sharingRuleForm.sharingNote")}
                 </p>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => router.push(backHref)}>
-                        Cancel
+                        {t("admin.sharingRuleForm.cancel")}
                     </Button>
                     <Button onClick={handleSubmit}>
-                        {mode === "create" ? "Create rule" : "Save changes"}
+                        {mode === "create" ? t("admin.sharingRuleForm.createRule") : t("admin.sharingRuleForm.saveChanges")}
                     </Button>
                 </div>
             </div>

@@ -37,6 +37,7 @@ export async function getUserCompanionRecordId(
             organizationId,
             objectDefId: userObject.id,
             backingUserId: userId,
+            isDeleted: false,
         },
         select: { id: true },
     });
@@ -82,6 +83,7 @@ export async function ensureUserCompanionRecord(
             organizationId,
             objectDefId: userObject.id,
             backingUserId: user.id,
+            isDeleted: false,
         },
         select: { id: true },
     });

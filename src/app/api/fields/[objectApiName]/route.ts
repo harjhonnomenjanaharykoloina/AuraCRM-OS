@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
+import { getSessionUser } from "@/lib/auth/types";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -9,13 +10,13 @@ export async function GET(
 ) {
     try {
         const session = await auth();
-        if (!session?.user) {
+        const user = getSessionUser(session);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = session.user as any;
         const userId = parseInt(user.id);
-        const organizationId = parseInt(user.organizationId);
+        const organizationId = user.organizationId;
         const { objectApiName } = await params;
 
         if (Number.isNaN(userId) || Number.isNaN(organizationId)) {

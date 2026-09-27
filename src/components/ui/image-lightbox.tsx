@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 type ImageLightboxProps = {
@@ -35,10 +36,14 @@ export function ImageLightbox({ src, alt, className }: ImageLightboxProps) {
                 aria-label="Open image preview"
                 onClick={() => setOpen(true)}
             >
-                <img
+                <Image
                     src={src}
                     alt={alt}
                     className={className ?? "max-h-48 rounded border border-border/60"}
+                    width={0}
+                    height={0}
+                    style={{ width: "auto", height: "auto" }}
+                    unoptimized
                 />
                 <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-black/70 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
                     View
@@ -67,7 +72,7 @@ export function ImageLightbox({ src, alt, className }: ImageLightboxProps) {
                         <div className="flex min-h-full min-w-full items-center justify-center">
                             <div className="w-fit max-w-none">
                                 <div className="rounded-2xl bg-white p-4 shadow-2xl">
-                                    <img src={src} alt={alt} className="max-h-none max-w-none" />
+                                    <Image src={src} alt={alt} className="max-h-none max-w-none" width={0} height={0} style={{ width: "auto", height: "auto" }} unoptimized />
                                 </div>
                             </div>
                         </div>

@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import {
     removeDependenciesForSource,
@@ -14,18 +14,6 @@ import {
     normalizeRecordPageLayoutConfig,
 } from "@/lib/record-page-layout";
 import { MetadataDependencySourceType } from "@prisma/client";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (user.userType !== "admin") {
-        throw new Error("Forbidden: Admin access required");
-    }
-    return { userId: parseInt(user.id), organizationId: parseInt(user.organizationId) };
-}
 
 const createLayoutSchema = z.object({
     objectDefId: z.number(),
@@ -48,7 +36,7 @@ const assignmentSchema = z.object({
 
 export async function createRecordPageLayout(payload: z.infer<typeof createLayoutSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const data = createLayoutSchema.parse(payload);
 
         const objectDef = await db.objectDefinition.findUnique({
@@ -99,7 +87,7 @@ export async function createRecordPageLayout(payload: z.infer<typeof createLayou
 
 export async function updateRecordPageLayout(payload: z.infer<typeof updateLayoutSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const data = updateLayoutSchema.parse(payload);
 
         const layout = await db.recordPageLayout.findUnique({
@@ -145,7 +133,7 @@ export async function updateRecordPageLayout(payload: z.infer<typeof updateLayou
 
 export async function setDefaultRecordPageLayout(layoutId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const layout = await db.recordPageLayout.findUnique({
             where: { id: layoutId },
@@ -176,7 +164,7 @@ export async function setDefaultRecordPageLayout(layoutId: number) {
 
 export async function createRecordPageAssignment(payload: z.infer<typeof assignmentSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const data = assignmentSchema.parse(payload);
 
         const objectDef = await db.objectDefinition.findUnique({
@@ -244,7 +232,7 @@ export async function createRecordPageAssignment(payload: z.infer<typeof assignm
 
 export async function deleteRecordPageAssignment(assignmentId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const assignment = await db.recordPageAssignment.findUnique({
             where: { id: assignmentId },
@@ -268,7 +256,7 @@ export async function deleteRecordPageAssignment(assignmentId: number) {
 
 export async function deleteRecordPageLayout(layoutId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const layout = await db.recordPageLayout.findUnique({
             where: { id: layoutId },

@@ -10,10 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { IconPicker } from "./icon-picker";
 import { updateObjectIdentity } from "@/actions/admin/admin-actions";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useTranslations } from "@/i18n/client";
 
 function getIconComponent(name?: string) {
   return name ? ((Icons as any)[name] as React.ComponentType<{ className?: string }>) : undefined;
@@ -40,6 +40,7 @@ export function ObjectIconCard({
   enableChatter,
   isUserObject = false,
 }: ObjectIconCardProps) {
+  const t = useTranslations("admin.objects.objectIconCard");
   const [icon, setIcon] = useState<string>(currentIcon || "Box");
   const [name, setName] = useState<string>(label);
   const [plural, setPlural] = useState<string>(pluralLabel);
@@ -170,7 +171,7 @@ export function ObjectIconCard({
 
         <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
           <Button onClick={handleSave} disabled={isPending} className="sm:w-auto w-full">
-            {isPending ? "Saving..." : "Save Changes"}
+            {isPending ? t("saving") : t("saveChanges")}
           </Button>
         </div>
       </CardContent>

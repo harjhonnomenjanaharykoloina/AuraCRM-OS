@@ -16,6 +16,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useTranslations } from "@/i18n/client";
 
 export function SharingRuleActions({
     ruleId,
@@ -24,6 +25,7 @@ export function SharingRuleActions({
     ruleId: number;
     isActive: boolean;
 }) {
+    const t = useTranslations();
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -31,7 +33,9 @@ export function SharingRuleActions({
         startTransition(async () => {
             const result = await toggleSharingRule(ruleId, !isActive);
             if (result.success) {
-                toast.success(isActive ? "Rule deactivated" : "Rule activated");
+                toast.success(
+                    isActive ? t("admin.ruleCommon.ruleDeactivated") : t("admin.ruleCommon.ruleActivated")
+                );
                 router.refresh();
             } else {
                 toast.error(result.error);
@@ -43,7 +47,7 @@ export function SharingRuleActions({
         startTransition(async () => {
             const result = await deleteSharingRule(ruleId);
             if (result.success) {
-                toast.success("Rule deleted");
+                toast.success(t("admin.ruleCommon.ruleDeleted"));
                 router.refresh();
             } else {
                 toast.error(result.error);
@@ -54,24 +58,24 @@ export function SharingRuleActions({
     return (
         <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleToggle} disabled={isPending}>
-                {isActive ? "Deactivate" : "Activate"}
+                {isActive ? t("admin.ruleCommon.deactivate") : t("admin.ruleCommon.activate")}
             </Button>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="sm" disabled={isPending}>
-                        Delete
+                        {t("shared.buttons.delete")}
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete sharing rule?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("admin.sharingRuleDelete.title")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This permanently removes the rule. Any shared access created by it will be rebuilt by the background job.
+                            {t("admin.sharingRuleDelete.description")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>{t("admin.ruleCommon.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>{t("shared.buttons.delete")}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -16,6 +16,7 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deleteDuplicateRule, toggleDuplicateRule } from "@/actions/admin/duplicate-rule-actions";
+import { useTranslations } from "@/i18n/client";
 
 export function DuplicateRuleActions({
     ruleId,
@@ -24,6 +25,7 @@ export function DuplicateRuleActions({
     ruleId: number;
     isActive: boolean;
 }) {
+    const t = useTranslations();
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -31,7 +33,9 @@ export function DuplicateRuleActions({
         startTransition(async () => {
             const result = await toggleDuplicateRule(ruleId, !isActive);
             if (result.success) {
-                toast.success(isActive ? "Rule deactivated" : "Rule activated");
+                toast.success(
+                    isActive ? t("admin.ruleCommon.ruleDeactivated") : t("admin.ruleCommon.ruleActivated")
+                );
                 router.refresh();
             } else {
                 toast.error(result.error);
@@ -43,7 +47,7 @@ export function DuplicateRuleActions({
         startTransition(async () => {
             const result = await deleteDuplicateRule(ruleId);
             if (result.success) {
-                toast.success("Rule deleted");
+                toast.success(t("admin.ruleCommon.ruleDeleted"));
                 router.refresh();
             } else {
                 toast.error(result.error);
@@ -54,24 +58,24 @@ export function DuplicateRuleActions({
     return (
         <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={handleToggle} disabled={isPending}>
-                {isActive ? "Deactivate" : "Activate"}
+                {isActive ? t("admin.ruleCommon.deactivate") : t("admin.ruleCommon.activate")}
             </Button>
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <Button variant="ghost" size="sm" disabled={isPending}>
-                        Delete
+                        {t("shared.buttons.delete")}
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Delete duplicate rule?</AlertDialogTitle>
+                        <AlertDialogTitle>{t("admin.duplicateRuleDelete.title")}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This permanently removes the rule and stops duplicate checking for it.
+                            {t("admin.duplicateRuleDelete.description")}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+                        <AlertDialogCancel>{t("admin.ruleCommon.cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>{t("shared.buttons.delete")}</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

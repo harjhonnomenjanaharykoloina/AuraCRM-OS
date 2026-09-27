@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/layout/admin-shell";
 
@@ -8,9 +9,9 @@ export default async function AdminLayout({
     children: React.ReactNode;
 }) {
     const session = await auth();
-    if (!session?.user) redirect("/login");
+    const user = getSessionUser(session);
+    if (!user) redirect("/login");
 
-    const user = session.user as any;
     if (user.userType !== "admin") redirect("/app/dashboard");
 
     return <AdminShell user={user}>{children}</AdminShell>;

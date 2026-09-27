@@ -1,48 +1,10 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import { sanitizeUserObjectPermissions, invalidateUserPermissionCache } from "@/lib/permissions";
 import { z } from "zod";
-import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
-
-function sanitizeUserObjectPermissions<T extends {
-    allowRead: boolean;
-    allowCreate: boolean;
-    allowEdit: boolean;
-    allowDelete: boolean;
-    allowViewAll: boolean;
-    allowModifyAll: boolean;
-    allowModifyListViews: boolean;
-}>(objectApiName: string, permissions: T): T {
-    if (objectApiName !== USER_OBJECT_API_NAME) {
-        return permissions;
-    }
-
-    return {
-        ...permissions,
-        allowCreate: false,
-        allowEdit: false,
-        allowDelete: false,
-        allowModifyAll: false,
-    };
-}
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 const createPermissionSetSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -51,8 +13,7 @@ const createPermissionSetSchema = z.object({
 
 export async function createPermissionSet(data: z.infer<typeof createPermissionSetSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = createPermissionSetSchema.parse(data);
 
@@ -88,8 +49,7 @@ export async function updateObjectPermission(
     }
 ) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         // Verify permission set belongs to org
         const permSet = await db.permissionSet.findFirst({
@@ -134,8 +94,7 @@ export async function togglePermission(
     value: boolean
 ) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         // Verify permission set
         const permSet = await db.permissionSet.findFirst({
@@ -203,8 +162,7 @@ const createPermissionSetGroupSchema = z.object({
 
 export async function createPermissionSetGroup(data: z.infer<typeof createPermissionSetGroupSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = createPermissionSetGroupSchema.parse(data);
 
@@ -228,8 +186,7 @@ export async function createPermissionSetGroup(data: z.infer<typeof createPermis
 
 export async function addPermissionSetToGroup(groupId: number, permissionSetId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const group = await db.permissionSetGroup.findFirst({
             where: { id: groupId, organizationId },
@@ -300,8 +257,7 @@ export async function addPermissionSetToGroup(groupId: number, permissionSetId: 
 
 export async function removePermissionSetFromGroup(groupId: number, permissionSetId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const group = await db.permissionSetGroup.findFirst({
             where: { id: groupId, organizationId },
@@ -353,8 +309,7 @@ export async function removePermissionSetFromGroup(groupId: number, permissionSe
 
 export async function deletePermissionSetGroup(groupId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const group = await db.permissionSetGroup.findFirst({
             where: { id: groupId, organizationId },
@@ -404,8 +359,7 @@ export async function deletePermissionSetGroup(groupId: number) {
 
 export async function removeUserFromPermissionSetGroup(groupId: number, userId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const group = await db.permissionSetGroup.findFirst({
             where: { id: groupId, organizationId },
@@ -448,6 +402,7 @@ export async function removeUserFromPermissionSetGroup(groupId: number, userId: 
         revalidatePath(`/admin/permission-groups/${groupId}`);
         revalidatePath(`/admin/users/${userId}`);
         revalidatePath("/admin/users");
+        await invalidateUserPermissionCache(userId);
         return { success: true };
     } catch (error: any) {
         return { success: false, error: error.message };
@@ -456,8 +411,7 @@ export async function removeUserFromPermissionSetGroup(groupId: number, userId: 
 
 export async function toggleAppPermission(permissionSetId: number, appId: number, hasAccess: boolean) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const permissionSet = await db.permissionSet.findFirst({
             where: { id: permissionSetId, organizationId },
@@ -504,8 +458,7 @@ export async function toggleSystemPermission(
     value: boolean
 ) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const permissionSet = await db.permissionSet.findFirst({
             where: { id: permissionSetId, organizationId },

@@ -1,10 +1,10 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { buildFieldDataPayload, getFieldDisplayValue } from "@/lib/field-data";
 import { enqueueSharingRuleRecompute } from "@/lib/jobs/sharing-rule-jobs";
-import { getUserPermissionSetIds } from "@/lib/permissions";
+import { getUserPermissionSetIds, invalidateUserPermissionCache } from "@/lib/permissions";
 import { normalizeStoredUniqueValue, normalizeUniqueValue } from "@/lib/unique";
 import { validateRecordData } from "@/lib/validation/record-validation";
 import {
@@ -15,7 +15,10 @@ import {
 } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs"
+import { BCRYPT_COST } from "@/lib/crypto";
+import { passwordSchema } from "@/lib/password-validation";
+
 import {
     ensureUserCompanionRecord,
     USER_ID_FIELD_API_NAME,
@@ -27,22 +30,6 @@ import {
     evaluateCustomLogicExpression,
     evaluateOperator,
 } from "@/lib/validation/rule-logic";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 type ValidationConditionWithFields = ValidationCondition & {
     fieldDef?: { apiName: string; type: string } | null;
@@ -346,7 +333,7 @@ const inviteUserSchema = z.object({
         .regex(/^[a-z0-9]+$/, "Username must be lowercase letters and numbers only")
         .transform((value) => value.toLowerCase()),
     email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: passwordSchema,
     userType: z.enum(["standard", "admin"]),
 });
 
@@ -385,11 +372,10 @@ function formatZodFieldErrors(error: z.ZodError) {
 
 export async function inviteUser(data: z.infer<typeof inviteUserSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = inviteUserSchema.parse(data);
-        const hashedPassword = await bcrypt.hash(validated.password, 10);
+        const hashedPassword = await bcrypt.hash(validated.password, BCRYPT_COST);
 
         const existingEmail = await db.user.findFirst({
             where: { organizationId, email: validated.email },
@@ -433,14 +419,14 @@ export async function inviteUser(data: z.infer<typeof inviteUserSchema>) {
             }
             return { success: false, error: "A user with this information already exists." };
         }
-        return { success: false, error: error.message };
+        console.error("Create managed user error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
 export async function assignPermissionSet(userId: number, permissionSetId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const targetUser = await db.user.findFirst({
             where: { id: userId, organizationId },
@@ -492,19 +478,20 @@ export async function assignPermissionSet(userId: number, permissionSetId: numbe
         }
 
         revalidatePath(`/admin/users/${userId}`);
+        await invalidateUserPermissionCache(userId);
         return { success: true };
     } catch (error: any) {
         if (error.code === "P2002") {
             return { success: false, error: "This permission set is already assigned." };
         }
-        return { success: false, error: error.message };
+        console.error("Assign permission set error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
 export async function removePermissionAssignment(userId: number, permissionSetId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const assignment = await db.permissionSetAssignment.findFirst({
             where: {
@@ -546,9 +533,11 @@ export async function removePermissionAssignment(userId: number, permissionSetId
         });
 
         revalidatePath(`/admin/users/${userId}`);
+        await invalidateUserPermissionCache(userId);
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message };
+        console.error("Remove permission assignment error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -558,8 +547,7 @@ export async function removePermissionAssignment(userId: number, permissionSetId
  */
 export async function assignPermissionSetGroup(userId: number, groupId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const targetUser = await db.user.findFirst({
             where: { id: userId, organizationId },
@@ -632,9 +620,11 @@ export async function assignPermissionSetGroup(userId: number, groupId: number) 
         });
 
         revalidatePath(`/admin/users/${userId}`);
+        await invalidateUserPermissionCache(userId);
         return { success: true, assignedCount: permissionSetIds.length };
     } catch (error: any) {
-        return { success: false, error: error.message };
+        console.error("Assign permission set group error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -643,8 +633,7 @@ export async function updateManagedUserAccount(
     data: z.infer<typeof managedUserAccountSchema>
 ) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const validated = managedUserAccountSchema.parse(data);
 
@@ -706,7 +695,8 @@ export async function updateManagedUserAccount(
             }
             return { success: false, error: "A user with this information already exists." };
         }
-        return { success: false, error: error.message };
+        console.error("Update managed user account error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
@@ -715,8 +705,7 @@ export async function updateManagedUserProfile(
     data: z.infer<typeof managedUserProfileSchema>
 ) {
     try {
-        const { userId: actingUserId, organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { userId: actingUserId, organizationId } = await requireAdmin();
 
         const validated = managedUserProfileSchema.safeParse(data);
         if (!validated.success) {
@@ -826,7 +815,8 @@ export async function updateManagedUserProfile(
             await enforceUniqueFields(record.objectDef, recordData, record.id);
             await validateLookupValues(editableFields, recordData, organizationId);
         } catch (error: any) {
-            return { success: false, error: error.message };
+            console.error("Validate record data error:", error);
+            return { success: false, error: "An unexpected error occurred. Please try again." };
         }
 
         const valueMap = buildValueMap(
@@ -929,14 +919,14 @@ export async function updateManagedUserProfile(
             }
             return { success: false, error: "A user with this information already exists." };
         }
-        return { success: false, error: error.message || "Failed to update user profile." };
+        console.error("Update managed user profile error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 
 export async function updateManagedUserRecord(userId: number, data: Record<string, any>) {
     try {
-        const { userId: actingUserId, organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { userId: actingUserId, organizationId } = await requireAdmin();
 
         const permissionSetIds = await getUserPermissionSetIds(actingUserId);
         const record = await db.record.findFirst({
@@ -1009,7 +999,8 @@ export async function updateManagedUserRecord(userId: number, data: Record<strin
             await enforceUniqueFields(record.objectDef, data, record.id);
             await validateLookupValues(editableFields, data, organizationId);
         } catch (error: any) {
-            return { success: false, error: error.message };
+            console.error("Validate record data error:", error);
+            return { success: false, error: "An unexpected error occurred. Please try again." };
         }
 
         const valueMap = buildValueMap(
@@ -1081,7 +1072,8 @@ export async function updateManagedUserRecord(userId: number, data: Record<strin
         revalidatePath("/app");
         return { success: true };
     } catch (error: any) {
-        return { success: false, error: error.message || "Failed to update user record." };
+        console.error("Update managed user record error:", error);
+        return { success: false, error: "An unexpected error occurred. Please try again." };
     }
 }
 

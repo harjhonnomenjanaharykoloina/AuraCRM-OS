@@ -43,9 +43,9 @@ export function MetricWidget({ title, config }: MetricWidgetProps) {
         }
         fetchData();
     }, [
+        config,
         config.objectDefId,
         config.aggregation,
-        JSON.stringify(config.filters),
         config.filterLogic,
         config.filterExpression,
         config.ownerScope,

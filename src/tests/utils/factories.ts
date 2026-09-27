@@ -52,6 +52,10 @@ export function makeRecord(overrides: Partial<Record> = {}): Record {
         lastModifiedById: 1,
         createdAt: baseDate,
         updatedAt: baseDate,
+        isDeleted: false,
+        searchVector: null,
+        aiSummary: null,
+        aiSummaryUpdatedAt: null,
         ...overrides,
     };
 }

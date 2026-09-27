@@ -1,0 +1,82 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "deploy": {
+    "web": {
+      "build": {
+        "dockerfilePath": "Dockerfile",
+        "buildCommand": "pnpm prisma generate"
+      },
+      "runCommand": "pnpm start",
+      "healthcheck": {
+        "path": "/api/health",
+        "interval": "30s",
+        "timeout": "10s",
+        "retries": 3
+      },
+      "port": 3000
+    },
+    "worker": {
+      "build": {
+        "dockerfilePath": "Dockerfile"
+      },
+      "runCommand": "pnpm run jobs:worker",
+      "restart": "on-failure"
+    }
+  },
+  "plugins": [
+    {
+      "name": "postgresql",
+      "variables": {
+        "DATABASE_URL": "${{PostgreSQL.DATABASE_URL}}"
+      }
+    }
+  ],
+  "variables": {
+    "NEXT_PUBLIC_APP_NAME": "AuraCRM",
+    "LOG_LEVEL": "info",
+    "NODE_ENV": "production",
+    "BETTER_AUTH_TRUST_HOST": "true",
+    "EMAIL_PROVIDER": "smtp",
+    "SMTP_SECURE": "true",
+    "STORAGE_PROVIDER": "s3",
+    "SEARCH_PROVIDER": "postgresql",
+    "AI_PROVIDER": "none",
+    "NEXT_PUBLIC_APP_LOGO": "",
+    "ELASTICSEARCH_URL": "http://localhost:9200",
+    "SES_REGION": "us-east-1",
+    "AWS_REGION": "us-east-1"
+  },
+  "secrets": {
+    "DATABASE_URL": "",
+    "JWT_SECRET": "",
+    "BETTER_AUTH_URL": "",
+    "BETTER_AUTH_SECRET": "",
+    "SMTP_HOST": "",
+    "SMTP_PORT": "",
+    "SMTP_USER": "",
+    "SMTP_PASS": "",
+    "SMTP_FROM": "",
+    "EMAIL_FROM": "",
+    "GOOGLE_ID": "",
+    "GOOGLE_SECRET": "",
+    "EMAIL_ENCRYPTION_KEY": "",
+    "UPSTASH_REDIS_REST_URL": "",
+    "UPSTASH_REDIS_TOKEN": "",
+    "OPENAI_API_KEY": "",
+    "ANTHROPIC_API_KEY": "",
+    "S3_ACCESS_KEY": "",
+    "S3_SECRET_KEY": "",
+    "S3_BUCKET": "",
+    "S3_REGION": "",
+    "S3_ENDPOINT": "",
+    "INNGEST_EVENT_KEY": "",
+    "INNGEST_SIGNING_KEY": "",
+    "MCP_AUTH_TOKEN": "",
+    "RESEND_API_KEY": "",
+    "RESEND_FROM_EMAIL": "",
+    "SES_ACCESS_KEY_ID": "",
+    "SES_SECRET_ACCESS_KEY": "",
+    "SES_SOURCE_ARN": "",
+    "DISABLE_SIGNUP": ""
+  }
+}

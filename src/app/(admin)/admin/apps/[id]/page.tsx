@@ -1,12 +1,14 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { db } from "@/lib/db";
 import { AppForm } from "@/components/admin/apps/app-form";
 import { notFound } from "next/navigation";
 
 export default async function EditAppPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const organizationId = user.organizationId;
     const { id } = await params;
 
     // Fetch Available Objects

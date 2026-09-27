@@ -1,24 +1,14 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getUserContext } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
 import { getFieldDisplayValue } from "@/lib/field-data";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
 
-// Helper to get current user context
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    return { userId: parseInt(user.id), organizationId: parseInt(user.organizationId), userType: user.userType };
-}
-
 export async function getLookupOptions(targetObjectDefId: number) {
     const { userId, organizationId } = await getUserContext();
-    const queueIds = await getUserQueueIds(userId);
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -54,6 +44,7 @@ export async function getLookupOptions(targetObjectDefId: number) {
         where: {
             organizationId,
             objectDefId: targetObjectDefId,
+            isDeleted: false,
             ...(accessFilter ?? {}),
         },
         include: {
@@ -79,7 +70,7 @@ export async function getLookupOptions(targetObjectDefId: number) {
 }
 
 export async function getLookupLabel(targetObjectDefId: number, recordId: number) {
-    const { userId, organizationId } = await getUserContext();
+    const { userId: _userId, organizationId } = await getUserContext();
 
     // 1. Get Target Object Definition
     const targetObjectDef = await db.objectDefinition.findUnique({
@@ -99,6 +90,7 @@ export async function getLookupLabel(targetObjectDefId: number, recordId: number
         where: {
             id: recordId,
             organizationId,
+            isDeleted: false,
         },
         include: {
             fields: {

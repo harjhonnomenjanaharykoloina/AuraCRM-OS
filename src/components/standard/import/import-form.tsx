@@ -80,9 +80,13 @@ export function ImportForm({
                     <Button type="submit" disabled={!canRun || isPending}>
                         {isPending ? "Starting..." : "Start Import"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => {
-                        window.location.href = `/app/${appApiName}/${objectApiName}/import/template`;
-                    }}>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                            window.location.href = `/app/${appApiName}/${objectApiName}/import/template`;
+                        }}
+                    >
                         Download Template
                     </Button>
                     <Button type="button" variant="outline" onClick={() => router.push(`/app/${appApiName}/${objectApiName}`)}>

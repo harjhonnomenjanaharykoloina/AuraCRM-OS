@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -43,15 +43,8 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useTranslations } from "@/i18n/client";
 
-
-const formSchema = z.object({
-    name: z.string().min(1, "Name is required"),
-    apiName: z.string().min(1, "API Name is required"),
-    description: z.string().optional(),
-    icon: z.string().optional(),
-    navItems: z.array(z.number()),
-});
 
 interface AppFormProps {
     initialData?: {
@@ -67,9 +60,18 @@ interface AppFormProps {
 }
 
 export function AppForm({ initialData, availableObjects }: AppFormProps) {
+    const t = useTranslations();
     const router = useRouter();
     const [isDeleting, setIsDeleting] = useState(false);
     const [apiNameEdited, setApiNameEdited] = useState(Boolean(initialData?.apiName));
+
+    const formSchema = useMemo(() => z.object({
+        name: z.string().min(1, t("admin.appForm.nameRequired")),
+        apiName: z.string().min(1, t("admin.appForm.apiNameRequired")),
+        description: z.string().optional(),
+        icon: z.string().optional(),
+        navItems: z.array(z.number()),
+    }), [t]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -98,7 +100,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
             if (initialData) {
                 const result = await updateApp(initialData.id, values);
                 if (result.success) {
-                    toast.success("App updated successfully");
+                    toast.success(t("admin.appForm.updateSuccess"));
                     router.refresh();
                 } else {
                     toast.error(result.error);
@@ -106,14 +108,14 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
             } else {
                 const result = await createApp(values);
                 if (result.success) {
-                    toast.success("App created successfully");
+                    toast.success(t("admin.appForm.createSuccess"));
                     router.push("/admin/apps");
                 } else {
                     toast.error(result.error);
                 }
             }
         } catch {
-            toast.error("An error occurred");
+            toast.error(t("admin.appForm.error"));
         }
     }
 
@@ -123,13 +125,13 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
         try {
             const result = await deleteApp(initialData.id);
             if (result.success) {
-                toast.success("App deleted successfully");
+                toast.success(t("admin.appForm.deleteSuccess"));
                 router.push("/admin/apps");
             } else {
                 toast.error(result.error);
             }
         } catch {
-            toast.error("An error occurred");
+            toast.error(t("admin.appForm.error"));
         } finally {
             setIsDeleting(false);
         }
@@ -158,7 +160,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                         </Link>
                     </Button>
                     <h1 className="text-2xl font-semibold tracking-tight">
-                        {initialData ? "Edit App" : "New App"}
+                        {initialData ? t("admin.appForm.editApp") : t("admin.appForm.newApp")}
                     </h1>
             </div>
                 {initialData && (
@@ -166,21 +168,20 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                         <AlertDialogTrigger asChild>
                             <Button variant="destructive" size="sm" disabled={isDeleting}>
                                 <Trash2 className="h-4 w-4 mr-2" />
-                                Delete App
+                                {t("admin.appForm.deleteApp")}
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Delete this app?</AlertDialogTitle>
+                                <AlertDialogTitle>{t("admin.appForm.deleteConfirm")}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This will permanently delete the app and its configuration.
-                                    This action cannot be undone.
+                                    {t("admin.appForm.deleteDesc")}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>{t("admin.appForm.cancel")}</AlertDialogCancel>
                                 <AlertDialogAction onClick={handleDelete}>
-                                    Delete App
+                                    {t("admin.appForm.deleteApp")}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -195,7 +196,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                         <div className="space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>App Details</CardTitle>
+                                    <CardTitle>{t("admin.appForm.appDetails")}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <FormField
@@ -203,9 +204,9 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                         name="name"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>App Name</FormLabel>
+                                                <FormLabel>{t("admin.appForm.appName")}</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="e.g. Sales CRM" {...field} />
+                                                    <Input placeholder={t("admin.appForm.namePlaceholder")} {...field} />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
@@ -216,10 +217,10 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                         name="apiName"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>API Name</FormLabel>
+                                                <FormLabel>{t("shared.common.apiName")}</FormLabel>
                                                 <FormControl>
                                                     <Input
-                                                        placeholder="e.g. sales_crm"
+                                                        placeholder={t("admin.appForm.apiNamePlaceholder")}
                                                         {...field}
                                                         onChange={(event) => {
                                                             setApiNameEdited(true);
@@ -228,7 +229,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                                     />
                                                 </FormControl>
                                                 <FormDescription>
-                                                    Used in URLs and internal references. Lowercase with underscores only.
+                                                    {t("admin.appForm.apiNameDescription")}
                                                 </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
@@ -239,10 +240,10 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                         name="description"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Description</FormLabel>
+                                                <FormLabel>{t("admin.appForm.description")}</FormLabel>
                                                 <FormControl>
                                                     <Textarea
-                                                        placeholder="Brief description of this app..."
+                                                        placeholder={t("admin.appForm.descriptionPlaceholder")}
                                                         {...field}
                                                     />
                                                 </FormControl>
@@ -255,7 +256,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                         name="icon"
                                         render={({ field }) => (
                                             <FormItem className="flex flex-col">
-                                                <FormLabel>App Icon</FormLabel>
+                                                <FormLabel>{t("admin.appForm.appIcon")}</FormLabel>
                                                 <Popover>
                                                     <PopoverTrigger asChild>
                                                         <FormControl>
@@ -276,7 +277,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                                                         <span className="font-medium">{field.value}</span>
                                                                     </div>
                                                                 ) : (
-                                                                    "Select icon"
+                                                                    t("admin.appForm.selectIcon")
                                                                 )}
                                                                 <LayoutGrid className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                                             </Button>
@@ -289,7 +290,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                                     </PopoverContent>
                                                 </Popover>
                                                 <FormDescription>
-                                                    Select an icon to represent this app in the navigation menu.
+                                                    {t("admin.appForm.iconDescription")}
                                                 </FormDescription>
                                                 <FormMessage />
                                             </FormItem>
@@ -303,7 +304,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                         <div className="space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Navigation Items</CardTitle>
+                                    <CardTitle>{t("admin.appForm.navigationItems")}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <FormField
@@ -312,9 +313,9 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                         render={() => (
                                             <FormItem>
                                                 <div className="mb-4">
-                                                    <FormLabel className="text-base">Select Objects</FormLabel>
+                                                    <FormLabel className="text-base">{t("admin.appForm.selectObjects")}</FormLabel>
                                                     <FormDescription>
-                                                        Choose which objects appear in this app's sidebar. Selected objects are shown below in the same order they will appear in the standard app navigation.
+                                                        {t("admin.appForm.selectObjectsHelp")}
                                                     </FormDescription>
                                                 </div>
                                                 <div className="space-y-5">
@@ -356,19 +357,19 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                                     <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                                                         <div className="mb-3 flex items-center justify-between gap-3">
                                                             <div>
-                                                                <div className="text-sm font-semibold text-slate-900">Navigation order</div>
+                                                                <div className="text-sm font-semibold text-slate-900">{t("admin.appForm.navigationOrder")}</div>
                                                                 <div className="text-xs text-slate-500">
-                                                                    Move selected objects up or down to control the left sidebar order.
+                                                                    {t("admin.appForm.navOrderDescription")}
                                                                 </div>
                                                             </div>
                                                             <div className="text-xs font-medium text-slate-500">
-                                                                {selectedNavObjects.length} selected
+                                                                {t("admin.appForm.selectedCount", { count: selectedNavObjects.length })}
                                                             </div>
                                                         </div>
 
                                                         {selectedNavObjects.length === 0 ? (
                                                             <div className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-4 text-sm text-slate-500">
-                                                                Select at least one object to build this app's navigation.
+                                                                {t("admin.appForm.selectAtLeastOne")}
                                                             </div>
                                                         ) : (
                                                             <div className="space-y-2">
@@ -396,7 +397,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                                                                 className="h-8 w-8"
                                                                                 onClick={() => moveNavItem(obj.id, "up")}
                                                                                 disabled={index === 0}
-                                                                                aria-label={`Move ${obj.label} up`}
+                                                                                aria-label={t("admin.appForm.moveUp", { label: obj.label })}
                                                                             >
                                                                                 <ArrowUp className="h-4 w-4" />
                                                                             </Button>
@@ -407,7 +408,7 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                                                                                 className="h-8 w-8"
                                                                                 onClick={() => moveNavItem(obj.id, "down")}
                                                                                 disabled={index === selectedNavObjects.length - 1}
-                                                                                aria-label={`Move ${obj.label} down`}
+                                                                                aria-label={t("admin.appForm.moveDown", { label: obj.label })}
                                                                             >
                                                                                 <ArrowDown className="h-4 w-4" />
                                                                             </Button>
@@ -430,26 +431,25 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
                     {/* Dashboard Builder Link - Only if App Exists */}
                     {initialData && (
                         <div className="space-y-4">
-                            <h3 className="text-lg font-medium">Dashboard Widgets</h3>
+                            <h3 className="text-lg font-medium">{t("admin.appForm.dashboardWidgets")}</h3>
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-base">Custom Dashboard</CardTitle>
+                                    <CardTitle className="text-base">{t("admin.appForm.dashboardTitle")}</CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-sm text-muted-foreground">
-                                        Manage the widgets that appear on this app's home dashboard.
-                                        Use the new Drag-and-Drop builder to customize the layout.
+                                        {t("admin.appForm.dashboardDesc")}
                                     </p>
 
                                     <div className="flex items-center gap-4">
                                         <Button asChild variant="default" className="gap-2">
                                             <Link href={`/admin/apps/${initialData.id}/builder`}>
                                                 <LayoutGrid className="h-4 w-4" />
-                                                Launch Dashboard Builder
+                                                {t("admin.appForm.launchBuilder")}
                                             </Link>
                                         </Button>
                                         <div className="text-xs text-muted-foreground">
-                                            {initialData.widgets?.length || 0} configured
+                                            {t("admin.appForm.configuredCount", { count: initialData.widgets?.length || 0 })}
                                         </div>
                                     </div>
                                 </CardContent>
@@ -459,10 +459,10 @@ export function AppForm({ initialData, availableObjects }: AppFormProps) {
 
                     <div className="flex justify-end gap-2 pt-4">
                         <Button type="button" variant="ghost" onClick={() => router.back()}>
-                            Cancel
+                            {t("admin.appForm.cancel")}
                         </Button>
                         <Button type="submit">
-                            {initialData ? "Save Changes" : "Create App"}
+                            {initialData ? t("admin.appForm.saveChanges") : t("admin.appForm.createApp")}
                         </Button>
                     </div>
                 </form>

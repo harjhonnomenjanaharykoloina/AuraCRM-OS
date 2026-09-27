@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { getUserContext } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import {
     removeDependenciesForSource,
@@ -10,17 +10,6 @@ import { checkPermission } from "@/lib/permissions";
 import { normalizeCustomLogicExpressionOrThrow } from "@/lib/validation/rule-logic";
 import { ListViewPrincipalType, MetadataDependencySourceType } from "@prisma/client";
 import { z } from "zod";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) throw new Error("Unauthorized");
-    const user = session.user as any;
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 const listViewFilterSchema = z
     .object({

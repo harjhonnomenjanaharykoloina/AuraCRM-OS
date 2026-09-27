@@ -1,15 +1,17 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { getSessionUser } from "@/lib/auth/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
     const session = await auth();
-    if (!session?.user) {
+    const user = getSessionUser(session);
+    if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = Number(session.user.id ?? NaN);
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const userId = Number(user.id ?? NaN);
+    const organizationId = user.organizationId;
 
     if (isNaN(userId) || isNaN(organizationId)) {
         return NextResponse.json({ error: "Invalid session" }, { status: 400 });
@@ -58,12 +60,13 @@ export async function GET() {
 
 export async function PATCH(request: Request) {
     const session = await auth();
-    if (!session?.user) {
+    const user = getSessionUser(session);
+    if (!user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const userId = Number(session.user.id ?? NaN);
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const userId = Number(user.id ?? NaN);
+    const organizationId = user.organizationId;
 
     if (isNaN(userId) || isNaN(organizationId)) {
         return NextResponse.json({ error: "Invalid session" }, { status: 400 });

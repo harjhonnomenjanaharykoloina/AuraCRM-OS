@@ -28,6 +28,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createRecord, updateOwnUserRecord, updateRecord } from "@/actions/standard/record-actions";
+import { updateLeadStatus } from "@/actions/standard/lead-actions";
 import { updateManagedUserRecord } from "@/actions/admin/user-actions";
 import { Loader2 } from "lucide-react";
 import { applyLayoutVisibility, normalizeRecordPageLayoutConfig, type LayoutConfigV2 } from "@/lib/record-page-layout";
@@ -44,6 +45,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTranslations } from "@/i18n/client";
 
 interface RecordFormProps {
     objectDef: any;
@@ -108,6 +110,7 @@ export function RecordForm({
     submitLabel,
 }: RecordFormProps) {
     const router = useRouter();
+    const t = useTranslations("standard.recordForm");
     const [isLoading, setIsLoading] = useState(false);
     const [inlineError, setInlineError] = useState<string | null>(null);
     const [duplicateWarning, setDuplicateWarning] = useState<DuplicateWarningState | null>(null);
@@ -291,7 +294,8 @@ export function RecordForm({
         resolver: zodResolver(formSchema),
         defaultValues,
     });
-    const formValues = useWatch({ control: form.control }) || {};
+    const _formValues = useWatch({ control: form.control });
+    const formValues = useMemo(() => _formValues || {}, [_formValues]);
     const ownerIdValue = form.watch("ownerId") as string | undefined;
     const ownerQueueValue = form.watch("ownerQueueId") as string | undefined;
 
@@ -399,12 +403,38 @@ export function RecordForm({
             if (submitOverride) {
                 result = await submitOverride(cleanedValues);
             } else if (record) {
-                result =
-                    submitMode === "ownUserRecord"
-                        ? await updateOwnUserRecord(record.id, cleanedValues)
-                        : submitMode === "adminUserRecord"
-                            ? await updateManagedUserRecord(record.backingUserId, cleanedValues)
-                            : await updateRecord(objectDef.apiName, record.id, cleanedValues);
+                if (submitMode === "ownUserRecord") {
+                    result = await updateOwnUserRecord(record.id, cleanedValues);
+                } else if (submitMode === "adminUserRecord") {
+                    result = await updateManagedUserRecord(record.backingUserId, cleanedValues);
+                } else if (objectDef.apiName === "lead" && cleanedValues.status !== undefined) {
+                    // Route lead status changes through state machine validation
+                    const statusFieldDef = objectDef.fields.find((f: any) => f.apiName === "status");
+                    const statusOption = statusFieldDef?.picklistOptions?.find(
+                        (o: any) => String(o.id) === String(cleanedValues.status)
+                    );
+
+                    if (statusOption) {
+                        const statusResult = await updateLeadStatus(record.id, statusOption.label);
+                        if (!statusResult.success) {
+                            result = statusResult;
+                        } else {
+                            // Remove status from cleanedValues, update remaining fields
+                            const { status: _removed, ...remainingValues } = cleanedValues;
+                            if (Object.keys(remainingValues).length > 0) {
+                                const otherResult = await updateRecord(objectDef.apiName, record.id, remainingValues);
+                                result = otherResult.success ? statusResult : otherResult;
+                            } else {
+                                result = statusResult;
+                            }
+                        }
+                    } else {
+                        // Can't resolve status option, fall through to standard update
+                        result = await updateRecord(objectDef.apiName, record.id, cleanedValues);
+                    }
+                } else {
+                    result = await updateRecord(objectDef.apiName, record.id, cleanedValues);
+                }
             } else {
                 result = await createRecord(objectDef.apiName, cleanedValues);
             }
@@ -655,13 +685,13 @@ export function RecordForm({
                 <div className="flex gap-4 pt-4 border-t border-border/50">
                     <Button type="submit" disabled={isLoading} className="shadow-sm">
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        {submitLabel || (record ? "Save Changes" : "Create Record")}
+                        {submitLabel || (record ? t("saveChanges") : t("createRecord"))}
                     </Button>
                     <Button type="button" variant="outline" onClick={() => {
                         if (onSuccess) onSuccess();
                         else router.back();
                     }}>
-                        Cancel
+                        {t("cancel")}
                     </Button>
                 </div>
             </form>
@@ -676,7 +706,7 @@ export function RecordForm({
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Possible duplicates found</AlertDialogTitle>
+                        <AlertDialogTitle>{t("duplicateTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>
                             This save matches one or more duplicate rules. Review the matching records before you continue.
                         </AlertDialogDescription>
@@ -693,27 +723,27 @@ export function RecordForm({
                                                 href={`/app/${appApiName}/${objectDef.apiName}/${match.recordId}`}
                                                 className="text-xs text-primary hover:underline"
                                             >
-                                                Open record
+                                                {t("openRecord")}
                                             </Link>
                                         </div>
                                         <div className="mt-1 text-xs text-muted-foreground">
-                                            Rules: {match.matchedRuleNames.join(", ")}
+                                            {t("rulesLabel") + ": " + match.matchedRuleNames.join(", ")}
                                         </div>
                                         <div className="mt-1 text-xs text-muted-foreground">
-                                            Matching fields: {match.matchedFieldLabels.join(", ")}
+                                            {t("matchingFieldsLabel") + ": " + match.matchedFieldLabels.join(", ")}
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
                             <div className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">
-                                Matching records exist, but you do not have access to view them.
+                                {t("noAccess")}
                             </div>
                         )}
 
                         {duplicateWarning && duplicateWarning.hiddenMatchCount > 0 && (
                             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                                Additional possible duplicates exist but you do not have access to view them.
+                                {t("hiddenDuplicates")}
                             </div>
                         )}
                     </div>

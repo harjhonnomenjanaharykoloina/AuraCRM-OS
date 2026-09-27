@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import type { MetadataDependencyDetail } from "@/lib/metadata-dependencies";
 import { DependencyList } from "@/components/admin/objects/dependency-list";
+import { useTranslations } from "@/i18n/client";
 
 interface DeleteFieldButtonProps {
     fieldId: number;
@@ -26,6 +27,7 @@ interface DeleteFieldButtonProps {
 }
 
 export function DeleteFieldButton({ fieldId, objectDefId, label, apiName }: DeleteFieldButtonProps) {
+    const t = useTranslations("admin.objects.deleteFieldButton");
     const [isLoading, setIsLoading] = useState(false);
     const [open, setOpen] = useState(false);
     const [blockedDependencies, setBlockedDependencies] = useState<MetadataDependencyDetail[]>([]);
@@ -88,7 +90,7 @@ export function DeleteFieldButton({ fieldId, objectDefId, label, apiName }: Dele
                 }
                 toast.error(result.error);
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         } finally {
             setIsLoading(false);
@@ -146,22 +148,22 @@ export function DeleteFieldButton({ fieldId, objectDefId, label, apiName }: Dele
                                     <Trash2 className="h-5 w-5" />
                                 </div>
                                 <div className="space-y-1">
-                                    <DialogTitle>Delete this field?</DialogTitle>
+                                    <DialogTitle>{t("confirmTitle")}</DialogTitle>
                                     <DialogDescription>
-                                        "{label}" is safe to delete. This permanently removes the field and deletes all stored values.
+                                        {t("confirmDescription")}
                                     </DialogDescription>
                                 </div>
                             </div>
                         </DialogHeader>
                         <DialogFooter>
                             <Button variant="outline" onClick={() => setOpen(false)}>
-                                Cancel
+                                {t("cancelButton")}
                             </Button>
                             <Button
                                 onClick={handleDelete}
                                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                                Delete
+                                {t("confirmButton")}
                             </Button>
                         </DialogFooter>
                     </>

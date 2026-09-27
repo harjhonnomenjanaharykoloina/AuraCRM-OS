@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { formatCsvCell } from "@/lib/csv";
 import { db } from "@/lib/db";
 import { checkPermission, hasSystemPermission } from "@/lib/permissions";
+import { getSessionUser } from "@/lib/auth/types";
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 
@@ -14,12 +15,12 @@ export async function GET(
     try {
         const { objectApiName, jobId } = await params;
         const session = await auth();
-        if (!session?.user) {
+        const user = getSessionUser(session);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = session.user as any;
-        const organizationId = parseInt(user.organizationId);
+        const organizationId = user.organizationId;
         const userId = parseInt(user.id);
 
         const canRead = await checkPermission(userId, organizationId, objectApiName, "read");

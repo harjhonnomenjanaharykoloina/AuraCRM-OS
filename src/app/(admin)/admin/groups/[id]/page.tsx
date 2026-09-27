@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import {
@@ -14,12 +16,14 @@ import { RemoveGroupMemberButton } from "@/components/admin/groups/remove-group-
 
 export default async function GroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
     const { id } = await params;
     const groupId = parseInt(id, 10);
     if (isNaN(groupId)) return notFound();
 
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
 
     const group = await db.group.findUnique({
         where: { id: groupId, organizationId },
@@ -44,7 +48,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
 
     const userOptions = availableUsers.map(u => ({
         id: String(u.id),
-        label: `${u.name || u.email || `User #${u.id}`} (@${u.username})`,
+        label: `${u.name || u.email || t("shared.common.userFallback", { id: u.id })} (@${u.username})`,
     }));
 
     return (
@@ -61,9 +65,9 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead>{t("shared.common.user")}</TableHead>
+                            <TableHead>{t("shared.common.email")}</TableHead>
+                            <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -71,7 +75,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                             <TableRow key={user.id}>
                                 <TableCell className="font-medium">
                                     <div className="flex flex-col">
-                                        <span>{user.name || `User #${user.id}`}</span>
+                                        <span>{user.name || t("shared.common.userFallback", { id: user.id })}</span>
                                         <span className="text-xs text-muted-foreground">@{user.username}</span>
                                     </div>
                                 </TableCell>
@@ -79,7 +83,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                                 <TableCell>
                                     <RemoveGroupMemberButton
                                         userId={user.id}
-                                        userLabel={`${user.name || `User #${user.id}`} (@${user.username})`}
+                                        userLabel={`${user.name || t("shared.common.userFallback", { id: user.id })} (@${user.username})`}
                                         userEmail={user.email}
                                     />
                                 </TableCell>
@@ -88,7 +92,7 @@ export default async function GroupDetailPage({ params }: { params: Promise<{ id
                         {group.users.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                    No users in this group yet.
+                                    {t("admin.groupDetail.noUsersYet")}
                                 </TableCell>
                             </TableRow>
                         )}

@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import {
@@ -20,8 +22,10 @@ import { RemoveUserFromPermissionSetGroupButton } from "@/components/admin/permi
 
 export default async function PermissionGroupDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
     const { id } = await params;
     const groupId = parseInt(id);
 
@@ -104,14 +108,14 @@ export default async function PermissionGroupDetailPage({ params }: { params: Pr
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">{group.name}</h1>
                     <p className="text-muted-foreground">
-                        {group.description || "No description provided."}
+                        {group.description || t("admin.permissionGroupDetail.noDescription")}
                     </p>
                 </div>
             </div>
 
             <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-xl font-semibold">Included Permission Sets</h2>
+                    <h2 className="text-xl font-semibold">{t("admin.permissionGroupDetail.includedPermissionSets")}</h2>
                     <div className="flex flex-wrap gap-2">
                         <AddPermissionSetToGroupDialog groupId={group.id} availablePermissionSets={availablePermissionSets} />
                         <DeletePermissionSetGroupButton groupId={group.id} name={group.name} />
@@ -122,9 +126,9 @@ export default async function PermissionGroupDetailPage({ params }: { params: Pr
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="w-[100px]">Actions</TableHead>
+                                <TableHead>{t("shared.common.name")}</TableHead>
+                                <TableHead>{t("shared.common.description")}</TableHead>
+                                <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -148,7 +152,7 @@ export default async function PermissionGroupDetailPage({ params }: { params: Pr
                             {group.permissionSets.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                        No permission sets in this group.
+                                        {t("admin.permissionGroupDetail.noPermissionSets")}
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -159,16 +163,16 @@ export default async function PermissionGroupDetailPage({ params }: { params: Pr
 
             <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="text-xl font-semibold">Assigned Users</h2>
+                    <h2 className="text-xl font-semibold">{t("admin.permissionGroupDetail.assignedUsers")}</h2>
                 </div>
 
                 <div className="border rounded-lg">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>User</TableHead>
-                                <TableHead className="w-[160px]">Assignments</TableHead>
-                                <TableHead className="w-[100px]">Actions</TableHead>
+                                <TableHead>{t("shared.common.user")}</TableHead>
+                                <TableHead className="w-[160px]">{t("admin.permissionGroupDetail.assignments")}</TableHead>
+                                <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -176,18 +180,18 @@ export default async function PermissionGroupDetailPage({ params }: { params: Pr
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium">
                                         <div className="flex flex-col">
-                                            <span>{user.name ?? user.email ?? "Unknown"}</span>
+                                            <span>{user.name ?? user.email ?? t("shared.common.unknown")}</span>
                                             <span className="text-xs text-muted-foreground">{user.email}</span>
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">{count} set(s)</Badge>
+                                        <Badge variant="outline">{t("shared.common.setCount", { count })}</Badge>
                                     </TableCell>
                                     <TableCell>
                                         <RemoveUserFromPermissionSetGroupButton
                                             groupId={group.id}
                                             userId={user.id}
-                                            userName={user.name ?? user.email ?? "Unknown"}
+                                            userName={user.name ?? user.email ?? t("shared.common.unknown")}
                                             assignmentCount={count}
                                         />
                                     </TableCell>
@@ -196,7 +200,7 @@ export default async function PermissionGroupDetailPage({ params }: { params: Pr
                             {assignedUsers.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                                        No users assigned to this group.
+                                        {t("admin.permissionGroupDetail.noUsersAssigned")}
                                     </TableCell>
                                 </TableRow>
                             )}

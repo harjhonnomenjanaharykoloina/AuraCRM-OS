@@ -1,9 +1,15 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+} from "@/components/ui/drawer";
 import {
     LayoutDashboard,
     Database,
@@ -14,22 +20,31 @@ import {
     Inbox,
     ListChecks,
     Share2,
-    Copy
+    Copy,
+    X,
 } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 import { LogoutButton } from "@/components/shared/logout-button";
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+    sidebarOpen: boolean;
+    setSidebarOpen: (open: boolean) => void;
+}
+
+export function AdminSidebar({ sidebarOpen, setSidebarOpen }: AdminSidebarProps) {
     const pathname = usePathname();
-    const hideSidebar = pathname.includes("/admin/objects/") && pathname.includes("/record-pages/");
+    const t = useTranslations();
+    const hideSidebar =
+        pathname.includes("/admin/objects/") && pathname.includes("/record-pages/");
 
     if (hideSidebar) return null;
 
-    return (
-        <aside className="pb-12 w-64 bg-sidebar text-sidebar-foreground h-screen sticky top-0 hidden md:flex flex-col border-r border-sidebar-border transition-all duration-300">
+    const renderNav = () => (
+        <>
             {/* Header / Brand */}
             <div className="h-16 flex items-center px-6 border-b border-sidebar-border">
                 <div className="flex items-center gap-2 font-bold text-xl tracking-tight">
-                    <img src="/logo.png" alt="AuraCRM" className="h-6 w-6" />
+                    <Image src="/logo.png" alt="AuraCRM" className="h-6 w-6" width={24} height={24} />
                     <span>AuraCRM</span>
                     <span className="text-xs font-normal text-sidebar-foreground/70 ml-1 py-0.5 px-1.5 bg-sidebar-accent rounded">
                         Admin
@@ -49,13 +64,13 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin">
                         <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Dashboard
+                        {t("admin.sidebar.dashboard")}
                     </Link>
                 </Button>
 
                 {/* Section: Object Management */}
                 <div className="pt-4 pb-2 px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-                    Object Management
+                    {t("admin.sidebar.sections.objectManagement")}
                 </div>
                 <Button
                     variant="ghost"
@@ -67,13 +82,13 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/objects">
                         <Database className="mr-2 h-4 w-4" />
-                        Object Manager
+                        {t("admin.sidebar.objectManager")}
                     </Link>
                 </Button>
 
                 {/* Section: Access Control */}
                 <div className="pt-4 pb-2 px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-                    Access Control
+                    {t("admin.sidebar.sections.accessControl")}
                 </div>
                 <Button
                     variant="ghost"
@@ -85,7 +100,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/users">
                         <Users className="mr-2 h-4 w-4" />
-                        Users
+                        {t("admin.sidebar.users")}
                     </Link>
                 </Button>
                 <Button
@@ -98,7 +113,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/queues">
                         <Inbox className="mr-2 h-4 w-4" />
-                        Queues
+                        {t("admin.sidebar.queues")}
                     </Link>
                 </Button>
                 <Button
@@ -111,7 +126,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/groups">
                         <Users className="mr-2 h-4 w-4" />
-                        Groups
+                        {t("admin.sidebar.groups")}
                     </Link>
                 </Button>
                 <Button
@@ -124,7 +139,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/assignment-rules">
                         <ListChecks className="mr-2 h-4 w-4" />
-                        Assignment Rules
+                        {t("admin.sidebar.assignmentRules")}
                     </Link>
                 </Button>
                 <Button
@@ -137,7 +152,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/sharing-rules">
                         <Share2 className="mr-2 h-4 w-4" />
-                        Sharing Rules
+                        {t("admin.sidebar.sharingRules")}
                     </Link>
                 </Button>
                 <Button
@@ -150,7 +165,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/duplicate-rules">
                         <Copy className="mr-2 h-4 w-4" />
-                        Duplicate Rules
+                        {t("admin.sidebar.duplicateRules")}
                     </Link>
                 </Button>
                 <Button
@@ -163,7 +178,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/permissions">
                         <Shield className="mr-2 h-4 w-4" />
-                        Permission Sets
+                        {t("admin.sidebar.permissionSets")}
                     </Link>
                 </Button>
                 <Button
@@ -176,14 +191,13 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/permission-groups">
                         <Users className="mr-2 h-4 w-4" />
-                        Permission Groups
+                        {t("admin.sidebar.permissionGroups")}
                     </Link>
                 </Button>
 
-
                 {/* Section: Platform */}
                 <div className="pt-4 pb-2 px-3 text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider">
-                    Platform
+                    {t("admin.sidebar.sections.platform")}
                 </div>
                 <Button
                     variant="ghost"
@@ -195,7 +209,7 @@ export function AdminSidebar() {
                 >
                     <Link href="/admin/apps">
                         <AppWindow className="mr-2 h-4 w-4" />
-                        App Builder
+                        {t("admin.sidebar.appBuilder")}
                     </Link>
                 </Button>
             </nav>
@@ -209,13 +223,44 @@ export function AdminSidebar() {
                 >
                     <Link href="/app/dashboard">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Back to App
+                        {t("admin.sidebar.backToApp")}
                     </Link>
                 </Button>
                 <div className="pt-2">
                     <LogoutButton />
                 </div>
             </div>
-        </aside>
+        </>
+    );
+
+    return (
+        <>
+            {/* Desktop fixed sidebar */}
+            <aside className="pb-12 w-64 bg-sidebar text-sidebar-foreground h-screen sticky top-0 hidden md:flex flex-col border-r border-sidebar-border transition-all duration-300">
+                {renderNav()}
+            </aside>
+
+            {/* Mobile drawer */}
+            <div className="md:hidden">
+                <Drawer
+                    open={sidebarOpen}
+                    onOpenChange={setSidebarOpen}
+                    direction="left"
+                >
+                    <DrawerContent className="!w-64 p-0 flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+                        <DrawerClose asChild>
+                            <button
+                                type="button"
+                                className="absolute top-3 right-3 z-10 rounded-md p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                                aria-label="Close"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                        </DrawerClose>
+                        {renderNav()}
+                    </DrawerContent>
+                </Drawer>
+            </div>
+        </>
     );
 }

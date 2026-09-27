@@ -6,6 +6,8 @@ import { db } from "@/lib/db";
 import { getSearchableObjects } from "@/lib/permissions";
 import { Prisma } from "@prisma/client";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
+import { checkRateLimit, dataRateLimiter, tooManyRequestsResponse } from "@/lib/api-rate-limit";
+import { getSessionUser } from "@/lib/auth/types";
 
 const MAX_RESULTS = 30;
 const MIN_QUERY_LENGTH = 2;
@@ -96,14 +98,14 @@ function toSearchResult(record: any, object: { id: number; apiName: string; labe
 export async function GET(request: Request) {
     try {
         const session = await auth();
-        if (!session?.user) {
+        const user = getSessionUser(session);
+        if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const user = session.user as any;
         const userId = parseInt(user.id);
-        const organizationId = parseInt(user.organizationId);
-        const queueIds = await getUserQueueIds(userId);
+        const organizationId = user.organizationId;
+        const queueIds = await getUserQueueIds(userId, organizationId);
         const userGroupId = (await db.user.findUnique({
             where: { id: userId },
             select: { groupId: true },
@@ -111,6 +113,11 @@ export async function GET(request: Request) {
 
         if (isNaN(userId) || isNaN(organizationId)) {
             return NextResponse.json({ error: "Invalid session" }, { status: 400 });
+        }
+
+        const { allowed, resetAt } = await checkRateLimit(dataRateLimiter, String(userId));
+        if (!allowed) {
+            return tooManyRequestsResponse(resetAt);
         }
 
         const url = new URL(request.url);
@@ -168,6 +175,7 @@ export async function GET(request: Request) {
             const buildWhere = (filters: Prisma.RecordWhereInput[]) => ({
                 organizationId,
                 objectDefId: object.id,
+                isDeleted: false,
                 ...(accessFilter ?? {}),
                 OR: filters,
             });
@@ -234,6 +242,7 @@ export async function GET(request: Request) {
                 const where = {
                     organizationId,
                     objectDefId: object.id,
+                    isDeleted: false,
                     ...(accessFilter ?? {}),
                     OR: buildSearchFilters("contains", query, normalizedQuery, primaryFieldId),
                 };

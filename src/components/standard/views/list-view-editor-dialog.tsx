@@ -25,6 +25,7 @@ import { createListView, updateListView } from "@/actions/standard/list-view-act
 import { cn } from "@/lib/utils";
 import { validateCustomLogicExpressionInput } from "@/lib/validation/rule-logic";
 import { formatDateOnlyForInput, formatDateTimeForInput } from "@/lib/temporal";
+import { useTranslations } from "@/i18n/client";
 
 type FieldOption = {
     id: number;
@@ -187,6 +188,7 @@ export function ListViewEditorDialog({
     forcedViewMode = null,
 }: ListViewEditorDialogProps) {
     const router = useRouter();
+    const t = useTranslations("standard.listViewEditor");
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [isGlobal, setIsGlobal] = useState(true);
@@ -414,7 +416,7 @@ export function ListViewEditorDialog({
             if (mode === "edit" || !onCreated) {
                 router.refresh();
             }
-        } catch (error) {
+        } catch {
             toast.error("Failed to save list view.");
         } finally {
             setIsSaving(false);
@@ -445,26 +447,26 @@ export function ListViewEditorDialog({
                             <div className="rounded-lg border bg-slate-50/70 p-4">
                         <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                             <Info className="h-4 w-4 text-slate-500" />
-                            Basics
+                            {t("basicsSection")}
                         </div>
                         <div className="mt-4 grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
                             <div className="space-y-2">
-                                <Label htmlFor="view-name">View name</Label>
+                                <Label htmlFor="view-name">{t("viewNameLabel")}</Label>
                                 <Input
                                     id="view-name"
                                     value={name}
                                     onChange={(event) => setName(event.target.value)}
-                                    placeholder="e.g. My Open Deals"
+                                    placeholder={t("viewNamePlaceholder")}
                                 />
                             </div>
                             {!isCreate && (
                                 <div className="space-y-2">
-                                    <Label htmlFor="view-description">Description</Label>
+                                    <Label htmlFor="view-description">{t("descriptionLabel")}</Label>
                                     <Input
                                         id="view-description"
                                         value={description}
                                         onChange={(event) => setDescription(event.target.value)}
-                                        placeholder="Optional notes"
+                                        placeholder={t("descriptionPlaceholder")}
                                     />
                                 </div>
                             )}
@@ -479,7 +481,7 @@ export function ListViewEditorDialog({
                                 <div className="rounded-lg border bg-white p-4 shadow-sm">
                                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                                         <SlidersHorizontal className="h-4 w-4 text-slate-500" />
-                                        Visibility
+                                        {t("visibilitySection")}
                                     </div>
                                     <div className="mt-3 space-y-3">
                                         <RadioGroup
@@ -489,21 +491,21 @@ export function ListViewEditorDialog({
                                         >
                                             <div className="flex items-center gap-3 rounded-lg border bg-slate-50/60 p-3">
                                                 <RadioGroupItem value="all" id="view-global" />
-                                                <Label htmlFor="view-global">Everyone with access</Label>
+                                                <Label htmlFor="view-global">{t("everyoneWithAccess")}</Label>
                                             </div>
                                             <div className="flex items-center gap-3 rounded-lg border bg-slate-50/60 p-3">
                                                 <RadioGroupItem value="restricted" id="view-restricted" />
-                                                <Label htmlFor="view-restricted">Only specific groups or permissions</Label>
+                                                <Label htmlFor="view-restricted">{t("specificGroupsOrPermissions")}</Label>
                                             </div>
                                         </RadioGroup>
                                         {!isGlobal && (
                                             <div className="grid gap-4 md:grid-cols-2">
                                                 <div className="rounded-lg border bg-slate-50/60 p-3 space-y-2">
-                                                    <p className="text-sm font-medium text-foreground">Groups</p>
+                                                    <p className="text-sm font-medium text-foreground">{t("groupsLabel")}</p>
                                                     <ScrollArea className="h-28">
                                                         <div className="space-y-2 pr-2">
                                                             {groups.length === 0 && (
-                                                                <p className="text-xs text-muted-foreground">No groups available.</p>
+                                                                <p className="text-xs text-muted-foreground">{t("noGroupsAvailable")}</p>
                                                             )}
                                                             {groups.map((group) => (
                                                                 <label key={group.id} className="flex items-center gap-2 text-sm">
@@ -518,11 +520,11 @@ export function ListViewEditorDialog({
                                                     </ScrollArea>
                                                 </div>
                                                 <div className="rounded-lg border bg-slate-50/60 p-3 space-y-2">
-                                                    <p className="text-sm font-medium text-foreground">Permission sets</p>
+                                                    <p className="text-sm font-medium text-foreground">{t("permissionSetsLabel")}</p>
                                                     <ScrollArea className="h-28">
                                                         <div className="space-y-2 pr-2">
                                                             {permissionSets.length === 0 && (
-                                                                <p className="text-xs text-muted-foreground">No permission sets available.</p>
+                                                                <p className="text-xs text-muted-foreground">{t("noPermissionSetsAvailable")}</p>
                                                             )}
                                                             {permissionSets.map((permission) => (
                                                                 <label key={permission.id} className="flex items-center gap-2 text-sm">
@@ -894,10 +896,10 @@ export function ListViewEditorDialog({
 
                 <div className="flex items-center justify-end gap-2 border-t border-border/50 bg-slate-50 px-6 py-4">
                     <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={isSaving}>
-                        Cancel
+                        {t("cancel")}
                     </Button>
                     <Button onClick={handleSubmit} disabled={isSaving}>
-                        {isSaving ? "Saving..." : mode === "create" ? "Create view" : "Save changes"}
+                        {isSaving ? t("saving") : mode === "create" ? t("createView") : t("saveChanges")}
                     </Button>
                 </div>
             </DialogContent>

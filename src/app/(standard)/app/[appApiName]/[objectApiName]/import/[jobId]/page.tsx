@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Prisma } from "@prisma/client";
+import { getSessionUser } from "@/lib/auth/types";
 
 export default async function ImportJobDetailPage({
     params,
@@ -13,9 +14,9 @@ export default async function ImportJobDetailPage({
 }) {
     const { appApiName, objectApiName, jobId } = await params;
     const session = await auth();
-    if (!session?.user) return null;
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const organizationId = user.organizationId;
     const userId = parseInt(user.id);
 
     const canRead = await checkPermission(userId, organizationId, objectApiName, "read");
@@ -118,10 +119,15 @@ export default async function ImportJobDetailPage({
             <div className="rounded-xl border bg-white shadow-sm p-6 space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold">Failed Rows (up to 200)</h2>
-                    <Button asChild variant="outline" size="sm">
-                        <Link href={`/app/${appApiName}/${objectApiName}/import/${job.id}/errors`}>
-                            Download Errors CSV
-                        </Link>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        onClick={() => {
+                            window.location.href = `/app/${appApiName}/${objectApiName}/import/${job.id}/errors`;
+                        }}
+                    >
+                        Download Errors CSV
                     </Button>
                 </div>
                 {failedRows.length === 0 ? (

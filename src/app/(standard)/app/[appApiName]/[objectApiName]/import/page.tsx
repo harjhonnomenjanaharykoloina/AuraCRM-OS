@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ImportForm } from "@/components/standard/import/import-form";
 import { ImportJobDeleteButton } from "@/components/standard/import/import-job-delete-button";
+import { getSessionUser } from "@/lib/auth/types";
 
 export default async function BulkImportPage({
     params,
@@ -14,9 +15,9 @@ export default async function BulkImportPage({
 }) {
     const { appApiName, objectApiName } = await params;
     const session = await auth();
-    if (!session?.user) return null;
-    const user = session.user as any;
-    const organizationId = parseInt(user.organizationId);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const organizationId = user.organizationId;
     const userId = parseInt(user.id);
 
     const canRead = await checkPermission(userId, organizationId, objectApiName, "read");

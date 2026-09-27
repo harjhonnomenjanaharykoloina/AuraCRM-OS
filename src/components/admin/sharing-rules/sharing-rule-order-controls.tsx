@@ -6,6 +6,7 @@ import { reorderSharingRules } from "@/actions/admin/sharing-rule-actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowUp } from "lucide-react";
+import { useTranslations } from "@/i18n/client";
 
 export function SharingRuleOrderControls({
     objectDefId,
@@ -16,6 +17,7 @@ export function SharingRuleOrderControls({
     ruleIds: number[];
     index: number;
 }) {
+    const t = useTranslations();
     const [isPending, startTransition] = useTransition();
     const router = useRouter();
 
@@ -29,7 +31,7 @@ export function SharingRuleOrderControls({
         startTransition(async () => {
             const result = await reorderSharingRules(objectDefId, nextOrder);
             if (result.success) {
-                toast.success("Rule order updated");
+                toast.success(t("admin.ruleCommon.orderUpdated"));
                 router.refresh();
             } else {
                 toast.error(result.error);

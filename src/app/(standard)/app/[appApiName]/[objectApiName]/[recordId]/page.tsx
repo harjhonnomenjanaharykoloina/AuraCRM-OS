@@ -17,11 +17,15 @@ import { USER_ID_FIELD_API_NAME, USER_OBJECT_API_NAME } from "@/lib/user-compani
 
 export default async function RecordPage({
     params,
+    searchParams,
 }: {
     params: Promise<{ appApiName: string; objectApiName: string; recordId: string }>;
+    searchParams: Promise<{ trash?: string }>;
 }) {
     const { appApiName, objectApiName, recordId } = await params;
     const isNew = recordId === "new";
+    const { trash: trashParam } = await searchParams;
+    const isTrash = trashParam === "1" || trashParam === "true";
     const session = await auth();
     const userId = parseInt(session?.user?.id as string);
     const organizationId = parseInt((session?.user as any)?.organizationId);
@@ -135,7 +139,7 @@ export default async function RecordPage({
         }
     } else {
         // Fetch existing record
-        const result = await getRecord(objectApiName, parseInt(recordId));
+        const result = await getRecord(objectApiName, parseInt(recordId), { includeDeleted: isTrash });
 
         if (!result || !result.success) {
             if (result?.error === "ACCESS_DENIED" || result?.error === "INSUFFICIENT_PERMISSIONS") {
@@ -170,7 +174,7 @@ export default async function RecordPage({
         historyEntries = result.historyEntries || [];
         historyLookupLabels = result.historyLookupLabels || {};
 
-        const queueIds = await getUserQueueIds(userId);
+        const queueIds = await getUserQueueIds(userId, organizationId);
         const userGroupId = (await db.user.findUnique({
             where: { id: userId },
             select: { groupId: true },
@@ -193,6 +197,7 @@ export default async function RecordPage({
                 where: {
                     id: record.id,
                     organizationId,
+                    isDeleted: false,
                     ...(editFilter ?? {}),
                 },
                 select: { id: true },
@@ -212,6 +217,7 @@ export default async function RecordPage({
                 where: {
                     id: record.id,
                     organizationId,
+                    isDeleted: false,
                     ...(deleteFilter ?? {}),
                 },
                 select: { id: true },

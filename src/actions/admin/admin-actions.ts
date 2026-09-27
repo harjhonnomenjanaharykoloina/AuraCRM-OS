@@ -1,8 +1,8 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
-import { deleteFileSafe, deleteFolderSafe, resolveStoragePath } from "@/lib/file-storage";
+import { getStorageProvider } from "@/lib/storage/factory";
 import { normalizeApiName, normalizePicklistApiName } from "@/lib/api-names";
 import { isReservedObjectApiName, USER_ID_FIELD_API_NAME, USER_OBJECT_API_NAME } from "@/lib/user-companion";
 import {
@@ -20,7 +20,6 @@ import { normalizeCustomLogicExpressionOrThrow } from "@/lib/validation/rule-log
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { MetadataDependencySourceType, Prisma } from "@prisma/client";
-import path from "path";
 
 const DEFAULT_WIDGET_COLOR = "#3b82f6";
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/;
@@ -84,7 +83,7 @@ const widgetTypeToAllowedOperators: Record<string, string[]> = {
 
 export async function saveDashboardLayout(appId: number, widgets: any[]) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         // Verify app ownership
         const app = await db.appDefinition.findUnique({
@@ -295,19 +294,6 @@ export async function saveDashboardLayout(appId: number, widgets: any[]) {
 }
 
 
-// Helper to get current user context
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (user.userType !== "admin") {
-        throw new Error("Forbidden: Admin access required");
-    }
-    return { userId: parseInt(user.id), organizationId: parseInt(user.organizationId) };
-}
-
 // --- Object Definition Actions ---
 
 const optionalNumber = z.preprocess((value) => {
@@ -343,7 +329,7 @@ const updateObjectIconSchema = z.object({
 
 export async function createObjectDefinition(data: z.infer<typeof createObjectSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const validated = createObjectSchema.parse(data);
 
         // Auto-generate API name (slugify)
@@ -451,7 +437,7 @@ export async function createObjectDefinition(data: z.infer<typeof createObjectSc
 
 export async function updateObjectIcon(data: z.infer<typeof updateObjectIconSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const payload = updateObjectIconSchema.parse(data);
 
         const object = await db.objectDefinition.findUnique({
@@ -488,7 +474,7 @@ const updateObjectIdentitySchema = z.object({
 
 export async function updateObjectIdentity(data: z.infer<typeof updateObjectIdentitySchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const payload = updateObjectIdentitySchema.parse(data);
 
         // Auto-update plural label if it wasn't customized?
@@ -539,7 +525,7 @@ export async function updateObjectIdentity(data: z.infer<typeof updateObjectIden
 
 export async function deleteObjectDefinition(objectDefId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const objectDef = await db.objectDefinition.findUnique({
             where: { id: objectDefId, organizationId },
@@ -609,7 +595,7 @@ export async function deleteObjectDefinition(objectDefId: number) {
 
 export async function rebuildDependencyIndex() {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         await rebuildMetadataDependenciesForOrganization(organizationId);
         revalidatePath("/admin/objects");
         revalidatePath("/admin/apps");
@@ -813,7 +799,7 @@ async function syncPicklistOptions(
 
 export async function createFieldDefinition(data: z.infer<typeof createFieldSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const validated = createFieldSchema.parse(data);
 
         // Auto-generate API name
@@ -969,7 +955,7 @@ export async function createFieldDefinition(data: z.infer<typeof createFieldSche
 
 export async function updateFieldDefinition(fieldId: number, data: z.infer<typeof createFieldSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const validated = createFieldSchema.parse(data);
 
         // Ensure field belongs to org via objectDef
@@ -1147,7 +1133,7 @@ export async function updateFieldDefinition(fieldId: number, data: z.infer<typeo
 
 export async function deleteFieldDefinition(fieldId: number, objectDefId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         // Ensure field belongs to org
         const existingField = await db.fieldDefinition.findFirst({
@@ -1182,7 +1168,7 @@ export async function deleteFieldDefinition(fieldId: number, objectDefId: number
         const attachmentRows = fileAttachmentDelegate?.findMany
             ? await fileAttachmentDelegate.findMany({
                 where: { fieldDefId: fieldId, organizationId },
-                select: { storagePath: true },
+                select: { storagePath: true, storageProvider: true },
             })
             : [];
 
@@ -1193,6 +1179,7 @@ export async function deleteFieldDefinition(fieldId: number, objectDefId: number
             });
         });
 
+        const storage = getStorageProvider();
         const attachments = attachmentRows.filter(
             (attachment: { storagePath?: string | null }) => Boolean(attachment.storagePath)
         );
@@ -1200,9 +1187,7 @@ export async function deleteFieldDefinition(fieldId: number, objectDefId: number
             await Promise.all(
                 attachments.map(async (attachment: { storagePath?: string | null }) => {
                     if (!attachment.storagePath) return;
-                    const absolutePath = resolveStoragePath(attachment.storagePath);
-                    await deleteFileSafe(absolutePath);
-                    await deleteFolderSafe(path.dirname(absolutePath));
+                    await storage.delete(attachment.storagePath);
                 })
             );
         }
@@ -1217,7 +1202,7 @@ export async function deleteFieldDefinition(fieldId: number, objectDefId: number
 
 export async function checkFieldDeleteDefinition(fieldId: number, objectDefId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const existingField = await db.fieldDefinition.findFirst({
             where: {
@@ -1268,7 +1253,7 @@ const createAppSchema = z.object({
 
 export async function createApp(data: z.infer<typeof createAppSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const validated = createAppSchema.parse(data);
 
         const navItems = Array.from(new Set(validated.navItems));
@@ -1336,7 +1321,7 @@ export async function createApp(data: z.infer<typeof createAppSchema>) {
 
 export async function updateApp(appId: number, data: z.infer<typeof createAppSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const validated = createAppSchema.parse(data);
 
         const navItems = Array.from(new Set(validated.navItems));
@@ -1407,7 +1392,7 @@ export async function updateApp(appId: number, data: z.infer<typeof createAppSch
 
 export async function deleteApp(appId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         await db.$transaction(async (tx) => {
             await removeDependenciesForSource(tx, organizationId, MetadataDependencySourceType.APP, appId);
@@ -1433,7 +1418,7 @@ export async function deleteApp(appId: number) {
 
 export async function getObjectFields(objectApiName: string) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const objectDef = await db.objectDefinition.findFirst({
             where: {
@@ -1510,7 +1495,7 @@ function operatorRequiresValue(operator: string) {
 
 export async function createValidationRule(data: z.infer<typeof validationRuleSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const payload = validationRuleSchema.parse(data);
 
         if (payload.errorPlacement === "inline" && !payload.errorFieldId) {
@@ -1695,7 +1680,7 @@ export async function createValidationRule(data: z.infer<typeof validationRuleSc
 
 export async function updateValidationRule(ruleId: number, data: z.infer<typeof validationRuleSchema>) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
         const payload = validationRuleSchema.parse(data);
 
         if (payload.errorPlacement === "inline" && !payload.errorFieldId) {
@@ -1881,7 +1866,7 @@ export async function updateValidationRule(ruleId: number, data: z.infer<typeof 
 
 export async function deleteValidationRule(ruleId: number, objectDefId: number) {
     try {
-        const { organizationId } = await getUserContext();
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.validationRule.findUnique({
             where: { id: ruleId },

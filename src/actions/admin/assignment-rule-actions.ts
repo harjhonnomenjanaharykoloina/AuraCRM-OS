@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from "@/auth";
+import { requireAdmin } from "@/lib/auth/context";
 import { db } from "@/lib/db";
 import {
     removeDependenciesForSource,
@@ -10,22 +10,6 @@ import { AssignmentTargetType, MetadataDependencySourceType } from "@prisma/clie
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { USER_OBJECT_API_NAME } from "@/lib/user-companion";
-
-async function getUserContext() {
-    const session = await auth();
-    if (!session?.user) {
-        throw new Error("Unauthorized");
-    }
-    const user = session.user as any;
-    if (!user.id || !user.organizationId) {
-        throw new Error("Invalid session");
-    }
-    return {
-        userId: parseInt(user.id),
-        organizationId: parseInt(user.organizationId),
-        userType: user.userType,
-    };
-}
 
 const criteriaFilterSchema = z.object({
     fieldDefId: z.number().optional(),
@@ -109,8 +93,7 @@ async function validateCriteriaFields(
 
 export async function createAssignmentRule(data: z.infer<typeof assignmentRuleSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const payload = assignmentRuleSchema.parse(data);
 
@@ -175,8 +158,7 @@ export async function createAssignmentRule(data: z.infer<typeof assignmentRuleSc
 
 export async function updateAssignmentRule(ruleId: number, data: z.infer<typeof assignmentRuleSchema>) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const payload = assignmentRuleSchema.parse(data);
 
@@ -236,8 +218,7 @@ export async function updateAssignmentRule(ruleId: number, data: z.infer<typeof 
 
 export async function deleteAssignmentRule(ruleId: number) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.assignmentRule.findUnique({
             where: { id: ruleId },
@@ -259,8 +240,7 @@ export async function deleteAssignmentRule(ruleId: number) {
 
 export async function toggleAssignmentRule(ruleId: number, isActive: boolean) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rule = await db.assignmentRule.findUnique({
             where: { id: ruleId },
@@ -283,8 +263,7 @@ export async function toggleAssignmentRule(ruleId: number, isActive: boolean) {
 
 export async function reorderAssignmentRules(objectDefId: number, ruleIds: number[]) {
     try {
-        const { organizationId, userType } = await getUserContext();
-        if (userType !== "admin") throw new Error("Unauthorized");
+        const { organizationId } = await requireAdmin();
 
         const rules = await db.assignmentRule.findMany({
             where: {

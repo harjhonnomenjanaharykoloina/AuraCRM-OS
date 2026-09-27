@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { checkPermission } from "@/lib/permissions";
+import { getSessionUser, SessionUser } from "@/lib/auth/types";
 import { buildRecordAccessFilter, getUserQueueIds } from "@/lib/record-access";
 import { getFieldDisplayValue } from "@/lib/field-data";
 import {
@@ -11,19 +12,13 @@ import {
 import { Prisma, OwnerType } from "@prisma/client";
 import { getDateOnlyRange, parseDateTimeValue } from "@/lib/temporal";
 
-type SessionWithUser = {
-    user: {
-        id: string;
-        organizationId: string;
-    };
-};
-
-async function checkAuth(): Promise<SessionWithUser> {
+async function checkAuth(): Promise<SessionUser> {
     const session = await auth();
-    if (!session?.user) {
+    const user = getSessionUser(session);
+    if (!user) {
         throw new Error("Unauthorized");
     }
-    return session as unknown as SessionWithUser;
+    return user;
 }
 
 type WidgetFilter = {
@@ -306,8 +301,8 @@ function buildWhereFromFilters(baseWhere: any, filters: WidgetFilter[], fields: 
 
 export async function getMetricData(objectDefId: number, config: any = {}) {
     if (!objectDefId) return 0;
-    const session = await checkAuth();
-    const organizationId = parseInt(session.user.organizationId);
+    const user = await checkAuth();
+    const organizationId = user.organizationId;
 
     const objectDef = await db.objectDefinition.findFirst({
         where: { id: objectDefId, organizationId },
@@ -318,9 +313,9 @@ export async function getMetricData(objectDefId: number, config: any = {}) {
         throw new Error("Object not found");
     }
 
-    const userId = parseInt(session.user.id);
-    const orgId = parseInt(session.user.organizationId);
-    const queueIds = await getUserQueueIds(userId);
+    const userId = parseInt(user.id);
+    const orgId = user.organizationId;
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -335,6 +330,7 @@ export async function getMetricData(objectDefId: number, config: any = {}) {
     let where: any = {
         objectDefId: objectDef.id,
         organizationId,
+        isDeleted: false,
     };
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);
@@ -395,8 +391,8 @@ export async function getMetricData(objectDefId: number, config: any = {}) {
 export async function getListWidgetData(objectDefId: number, config: any = {}) {
     if (!objectDefId) return { columns: [], rows: [], objectApiName: null };
 
-    const session = await checkAuth();
-    const organizationId = parseInt(session.user.organizationId);
+    const user = await checkAuth();
+    const organizationId = user.organizationId;
 
     const objectDef = await db.objectDefinition.findFirst({
         where: { id: objectDefId, organizationId },
@@ -411,9 +407,9 @@ export async function getListWidgetData(objectDefId: number, config: any = {}) {
         throw new Error("Object not found");
     }
 
-    const userId = parseInt(session.user.id);
-    const orgId = parseInt(session.user.organizationId);
-    const queueIds = await getUserQueueIds(userId);
+    const userId = parseInt(user.id);
+    const orgId = user.organizationId;
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -428,6 +424,7 @@ export async function getListWidgetData(objectDefId: number, config: any = {}) {
     let where: any = {
         objectDefId: objectDef.id,
         organizationId,
+        isDeleted: false,
     };
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);
@@ -528,6 +525,7 @@ export async function getListWidgetData(objectDefId: number, config: any = {}) {
         ? await db.record.findMany({
             where: {
                 organizationId,
+                isDeleted: false,
                 id: { in: Array.from(lookupIds) },
             },
             select: {
@@ -637,8 +635,8 @@ export async function getListWidgetData(objectDefId: number, config: any = {}) {
 export async function getChartData(objectDefId: number, config: any = {}) {
     if (!objectDefId) return [];
 
-    const session = await checkAuth();
-    const organizationId = parseInt(session.user.organizationId);
+    const user = await checkAuth();
+    const organizationId = user.organizationId;
 
     const objectDef = await db.objectDefinition.findFirst({
         where: { id: objectDefId, organizationId },
@@ -647,9 +645,9 @@ export async function getChartData(objectDefId: number, config: any = {}) {
 
     if (!objectDef) throw new Error("Object not found");
 
-    const userId = parseInt(session.user.id);
-    const orgId = parseInt(session.user.organizationId);
-    const queueIds = await getUserQueueIds(userId);
+    const userId = parseInt(user.id);
+    const orgId = user.organizationId;
+    const queueIds = await getUserQueueIds(userId, organizationId);
     const userGroupId = (await db.user.findUnique({
         where: { id: userId },
         select: { groupId: true },
@@ -664,6 +662,7 @@ export async function getChartData(objectDefId: number, config: any = {}) {
     let where: any = {
         objectDefId: objectDef.id,
         organizationId,
+        isDeleted: false,
     };
 
     const accessFilter = canViewAll ? null : buildRecordAccessFilter(userId, queueIds, userGroupId);

@@ -93,7 +93,7 @@ export function UserAccountForm({ user, groups, queueNames }: UserAccountFormPro
             } else {
                 toast.error(result.error);
             }
-        } catch (error) {
+        } catch {
             toast.error("An unexpected error occurred");
         } finally {
             setIsLoading(false);

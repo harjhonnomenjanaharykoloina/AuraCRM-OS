@@ -2,23 +2,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Database, ShieldCheck, UserPlus, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { DemoDataButton } from "@/components/admin/demo-data-button";
+import { getT } from "@/i18n/server";
 
-export default function AdminDashboardPage() {
+export default async function AdminDashboardPage() {
+    const t = await getT();
     return (
         <div className="space-y-8">
             {/* Header */}
-           
+            
                 <DemoDataButton />
-           
+            
 
             {/* How It Works Section */}
             <div className="space-y-6">
                 <div>
                     <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2 text-foreground">
-                        Setup Guide
+                        {t("admin.dashboard.setupGuide")}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                        Follow these steps to configure your custom CRM application.
+                        {t("admin.dashboard.followSteps")}
                     </p>
                 </div>
 
@@ -31,18 +33,18 @@ export default function AdminDashboardPage() {
                             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <Database className="h-5 w-5 text-blue-600" />
                             </div>
-                            <CardTitle className="text-base font-semibold">1. Data Foundation</CardTitle>
+                            <CardTitle className="text-base font-semibold">{t("admin.dashboard.step1Title")}</CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-3">
-                            <p>Start by defining your data structure in the <strong>Object Manager</strong>.</p>
+                            <p>{t("admin.dashboard.step1Description")} <strong>{t("admin.sidebar.objectManager")}</strong>.</p>
                             <ul className="list-disc pl-4 space-y-1 text-xs marker:text-blue-500">
-                                <li>Create <strong>Objects</strong> (e.g. Projects)</li>
-                                <li>Add custom <strong>Fields</strong></li>
-                                <li>Set lookup targets early (they lock after creation)</li>
-                                <li>Configure record page layouts and highlights</li>
+                                <li>{t("admin.dashboard.step1.createObjects")} <strong>{t("admin.dashboard.step1.objects")}</strong> {t("admin.dashboard.step1.objectsExample")}</li>
+                                <li>{t("admin.dashboard.step1.addCustomFields")} <strong>{t("admin.dashboard.step1.fields")}</strong></li>
+                                <li>{t("admin.dashboard.step1.lookupTargets")}</li>
+                                <li>{t("admin.dashboard.step1.pageLayouts")}</li>
                             </ul>
                             <Link href="/admin/objects" className="text-xs font-semibold text-blue-600 hover:underline">
-                                Open Object Manager
+                                {t("admin.dashboard.step1.openLink")}
                             </Link>
                         </CardContent>
                     </Card>
@@ -54,18 +56,18 @@ export default function AdminDashboardPage() {
                             <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <LayoutDashboard className="h-5 w-5 text-purple-600" />
                             </div>
-                            <CardTitle className="text-base font-semibold">2. App Construction</CardTitle>
+                            <CardTitle className="text-base font-semibold">{t("admin.dashboard.step2Title")}</CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-3">
-                            <p>Group objects into functional Apps in the <strong>App Manager</strong>.</p>
+                            <p>{t("admin.dashboard.step2Description")} <strong>{t("admin.dashboard.step2.appManager")}</strong>.</p>
                             <ul className="list-disc pl-4 space-y-1 text-xs marker:text-purple-500">
-                                <li>Create <strong>App</strong> containers</li>
-                                <li>Configure <strong>Navigation</strong></li>
-                                <li>Design Dashboard <strong>Widgets</strong></li>
-                                <li>Assign apps to permission sets</li>
+                                <li>{t("admin.dashboard.step2.createApp")} <strong>{t("admin.dashboard.step2.app")}</strong> {t("admin.dashboard.step2.containers")}</li>
+                                <li>{t("admin.dashboard.step2.configureNav")} <strong>{t("admin.dashboard.step2.navigation")}</strong></li>
+                                <li>{t("admin.dashboard.step2.designDashboard")} <strong>{t("admin.dashboard.step2.widgets")}</strong></li>
+                                <li>{t("admin.dashboard.step2.assignApps")}</li>
                             </ul>
                             <Link href="/admin/apps" className="text-xs font-semibold text-purple-600 hover:underline">
-                                Open App Builder
+                                {t("admin.dashboard.step2.openLink")}
                             </Link>
                         </CardContent>
                     </Card>
@@ -77,37 +79,37 @@ export default function AdminDashboardPage() {
                             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <ShieldCheck className="h-5 w-5 text-amber-600" />
                             </div>
-                            <CardTitle className="text-base font-semibold">3. Security Model</CardTitle>
+                            <CardTitle className="text-base font-semibold">{t("admin.dashboard.step3Title")}</CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-3">
-                            <p>Control access specific data via <strong>Permission Sets</strong>.</p>
+                            <p>{t("admin.dashboard.step3Description")} <strong>{t("admin.sidebar.permissionSets")}</strong>.</p>
                             <ul className="list-disc pl-4 space-y-1 text-xs marker:text-amber-500">
-                                <li>Define <strong>Permission Sets</strong></li>
-                                <li>Set Object Access (CRUD)</li>
-                                <li>Create Permission Groups</li>
-                                <li>Configure queues and sharing rules</li>
-                                <li>Add duplicate rules for create/edit warning or block behavior</li>
-                                <li>Set assignment rules for auto‑routing</li>
+                                <li>{t("admin.dashboard.step3.define")} <strong>{t("admin.sidebar.permissionSets")}</strong></li>
+                                <li>{t("admin.dashboard.step3.crud")}</li>
+                                <li>{t("admin.dashboard.step3.permissionGroups")}</li>
+                                <li>{t("admin.dashboard.step3.queuesSharing")}</li>
+                                <li>{t("admin.dashboard.step3.duplicateRules")}</li>
+                                <li>{t("admin.dashboard.step3.assignmentRules")}</li>
                             </ul>
                             <div className="flex flex-wrap gap-2 text-xs font-semibold">
                                 <Link href="/admin/permissions" className="text-amber-600 hover:underline">
-                                    Permission Sets
+                                    {t("admin.sidebar.permissionSets")}
                                 </Link>
                                 <span className="text-amber-400">•</span>
                                 <Link href="/admin/queues" className="text-amber-600 hover:underline">
-                                    Queues
+                                    {t("admin.sidebar.queues")}
                                 </Link>
                                 <span className="text-amber-400">•</span>
                                 <Link href="/admin/sharing-rules" className="text-amber-600 hover:underline">
-                                    Sharing Rules
+                                    {t("admin.sidebar.sharingRules")}
                                 </Link>
                                 <span className="text-amber-400">•</span>
                                 <Link href="/admin/duplicate-rules" className="text-amber-600 hover:underline">
-                                    Duplicate Rules
+                                    {t("admin.sidebar.duplicateRules")}
                                 </Link>
                                 <span className="text-amber-400">•</span>
                                 <Link href="/admin/assignment-rules" className="text-amber-600 hover:underline">
-                                    Assignment Rules
+                                    {t("admin.sidebar.assignmentRules")}
                                 </Link>
                             </div>
                         </CardContent>
@@ -120,18 +122,18 @@ export default function AdminDashboardPage() {
                             <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
                                 <UserPlus className="h-5 w-5 text-emerald-600" />
                             </div>
-                            <CardTitle className="text-base font-semibold">4. User Access</CardTitle>
+                            <CardTitle className="text-base font-semibold">{t("admin.dashboard.step4Title")}</CardTitle>
                         </CardHeader>
                         <CardContent className="text-sm text-muted-foreground space-y-3">
-                            <p>Onboard your team in the <strong>User Management</strong> area.</p>
+                            <p>{t("admin.dashboard.step4Description")} <strong>{t("admin.header.userManagement")}</strong>{t("admin.dashboard.step4.areaSuffix")}</p>
                             <ul className="list-disc pl-4 space-y-1 text-xs marker:text-emerald-500">
-                                <li>Invite <strong>Users</strong></li>
-                                <li>Assign Role & Permissions</li>
-                                <li>Monitor adoption</li>
-                                <li>Add users to groups and queues</li>
+                                <li>{t("admin.dashboard.step4.invite")} <strong>{t("admin.sidebar.users")}</strong></li>
+                                <li>{t("admin.dashboard.step4.rolePerms")}</li>
+                                <li>{t("admin.dashboard.step4.monitor")}</li>
+                                <li>{t("admin.dashboard.step4.groupsQueues")}</li>
                             </ul>
                             <Link href="/admin/users" className="text-xs font-semibold text-emerald-600 hover:underline">
-                                Open User Management
+                                {t("admin.dashboard.step4.openLink")}
                             </Link>
                         </CardContent>
                     </Card>

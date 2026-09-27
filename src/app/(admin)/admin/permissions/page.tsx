@@ -1,4 +1,6 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
+import { getT } from "@/i18n/server";
 import { db } from "@/lib/db";
 import {
     Table,
@@ -10,13 +12,15 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Plus, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 import { CreatePermissionSetDialog } from "@/components/admin/permissions/create-permission-set-dialog";
 
 export default async function PermissionSetsPage() {
     const session = await auth();
-    if (!session?.user) return null;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const user = getSessionUser(session);
+    if (!user) return null;
+    const t = await getT();
+    const organizationId = user.organizationId;
 
     const permissionSets = await db.permissionSet.findMany({
         where: { organizationId },
@@ -32,9 +36,9 @@ export default async function PermissionSetsPage() {
         <div className="p-6 space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Permission Sets</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">{t("admin.permissionSets.title")}</h1>
                     <p className="text-muted-foreground">
-                        Define what users can see and do.
+                        {t("admin.permissionSets.subtitle")}
                     </p>
                 </div>
                 <CreatePermissionSetDialog />
@@ -44,10 +48,10 @@ export default async function PermissionSetsPage() {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead>Assigned Users</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
+                            <TableHead>{t("shared.common.name")}</TableHead>
+                            <TableHead>{t("shared.common.description")}</TableHead>
+                            <TableHead>{t("admin.permissionSets.assignedUsers")}</TableHead>
+                            <TableHead className="w-[100px]">{t("shared.common.actions")}</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -64,7 +68,7 @@ export default async function PermissionSetsPage() {
                                 <TableCell>
                                     <Button variant="ghost" size="sm" asChild>
                                         <Link href={`/admin/permissions/${ps.id}`}>
-                                            Manage
+                                            {t("shared.buttons.manage")}
                                         </Link>
                                     </Button>
                                 </TableCell>
@@ -73,7 +77,7 @@ export default async function PermissionSetsPage() {
                         {permissionSets.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                    No permission sets found. Create one to get started.
+                                    {t("admin.permissionSets.noPermissionSetsEmpty")}
                                 </TableCell>
                             </TableRow>
                         )}

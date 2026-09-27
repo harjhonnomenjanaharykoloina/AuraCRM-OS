@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CleanMinimalRegister } from "@/components/auth/clean-minimal-register";
 import { toast } from "sonner";
 import { register } from "@/actions/auth";
+import { authClient } from "@/lib/auth-client";
 
 export default function RegisterPage() {
     const router = useRouter();
@@ -39,10 +40,17 @@ export default function RegisterPage() {
 
         return parsed;
     };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-        setError(null); // Clear error on input change
+    const signUpWithGoogle = async () => {
+        try {
+            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/app/dashboard" });
+            if (result.error) {
+                setError("Could not sign up with Google");
+                toast.error("Could not sign up with Google");
+            }
+        } catch {
+            setError("An unexpected error occurred");
+            toast.error("An unexpected error occurred");
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -97,7 +105,7 @@ export default function RegisterPage() {
                     void submitRegister();
                 }}
                 ctaHref="/login"
-                ctaLabel="Sign in"
+                onGoogleSignUp={signUpWithGoogle}
             />
         </form>
     );

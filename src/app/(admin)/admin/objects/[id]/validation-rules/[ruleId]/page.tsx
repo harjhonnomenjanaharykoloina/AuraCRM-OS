@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getSessionUser } from "@/lib/auth/types";
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
 import { ValidationRuleForm, ValidationRuleFormValues } from "@/components/admin/objects/validation-rule-form";
@@ -9,9 +10,10 @@ export default async function ValidationRulePage({
     params: Promise<{ id: string; ruleId: string }>;
 }) {
     const session = await auth();
-    if (!session?.user) return null;
+    const user = getSessionUser(session);
+    if (!user) return null;
     const { id, ruleId } = await params;
-    const organizationId = Number(session.user.organizationId ?? NaN);
+    const organizationId = user.organizationId;
     const objectId = parseInt(id);
     if (isNaN(objectId)) notFound();
 
