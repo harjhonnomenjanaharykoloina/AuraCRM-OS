@@ -6,7 +6,7 @@ vi.mock("@/lib/auth/proxy", () => ({
     getProxySession: mockGetProxySession,
 }));
 
-import proxy, { config } from "@/proxy";
+import proxy, { config } from "@/middleware";
 
 function makeRequest(url: string): Request {
     return new Request(url);
