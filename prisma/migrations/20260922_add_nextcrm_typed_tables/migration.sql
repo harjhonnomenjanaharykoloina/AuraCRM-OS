@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "vector";
+
 
 -- CreateEnum
 CREATE TYPE "taskStatus" AS ENUM ('ACTIVE', 'PENDING', 'COMPLETE');
