@@ -14,7 +14,7 @@ done
 echo "Environment validation passed."
 
 echo "Running database migrations..."
-pnpm prisma migrate deploy || {
+npx prisma migrate deploy || {
     echo "ERROR: Database migration failed." >&2
     exit 1
 }
