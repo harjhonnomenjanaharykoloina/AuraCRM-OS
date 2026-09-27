@@ -19,7 +19,7 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-RUN pnpm prisma generate
+RUN npx prisma generate
 
 # Build-time secrets are passed as build args, never baked into the final image.
 # In production, supply real values via --build-arg JWT_SECRET=... --build-arg BETTER_AUTH_SECRET=...
@@ -52,7 +52,7 @@ RUN pnpm install --prod --ignore-scripts
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
-RUN pnpm prisma generate
+RUN npx prisma generate
 
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
