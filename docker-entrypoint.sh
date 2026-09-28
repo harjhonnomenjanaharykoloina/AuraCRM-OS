@@ -13,6 +13,27 @@ done
 
 echo "Environment validation passed."
 
+# Optional warnings for missing recommended env vars
+eval "value=\$BETTER_AUTH_URL"
+if [ -z "$value" ]; then
+    echo "WARNING: BETTER_AUTH_URL environment variable is not set. OAuth redirect URIs may be incorrect."
+fi
+
+eval "value=\$GOOGLE_ID"
+if [ -z "$value" ]; then
+    echo "WARNING: GOOGLE_ID environment variable is not set. Google Sign-In won't work."
+fi
+
+eval "value=\$GOOGLE_SECRET"
+if [ -z "$value" ]; then
+    echo "WARNING: GOOGLE_SECRET environment variable is not set. Google Sign-In won't work."
+fi
+
+eval "value=\$EMAIL_ENCRYPTION_KEY"
+if [ -z "$value" ]; then
+    echo "WARNING: EMAIL_ENCRYPTION_KEY environment variable is not set. Email account encryption is not configured (required for production)."
+fi
+
 echo "Running database migrations..."
 npx prisma migrate deploy || {
     echo "ERROR: Database migration failed." >&2

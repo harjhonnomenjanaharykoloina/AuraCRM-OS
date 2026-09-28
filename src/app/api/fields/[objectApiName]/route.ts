@@ -19,7 +19,7 @@ export async function GET(
         const organizationId = user.organizationId;
         const { objectApiName } = await params;
 
-        if (Number.isNaN(userId) || Number.isNaN(organizationId)) {
+        if (organizationId == null || Number.isNaN(userId) || Number.isNaN(organizationId)) {
             return NextResponse.json({ error: "Invalid session" }, { status: 400 });
         }
 

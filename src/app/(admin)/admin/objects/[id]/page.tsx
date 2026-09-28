@@ -36,7 +36,7 @@ import { getSessionUser } from "@/lib/auth/types";
 export default async function ObjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const session = await auth();
     const user = getSessionUser(session);
-    if (!user) return null;
+    if (!user || user.organizationId === undefined) return null;
     const t = await getT();
     const organizationId = user.organizationId;
     const { id } = await params;

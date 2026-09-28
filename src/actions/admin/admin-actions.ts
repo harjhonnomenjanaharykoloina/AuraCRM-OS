@@ -1403,6 +1403,10 @@ export async function deleteApp(appId: number) {
                     sourceAppId: appId,
                 },
             });
+            await tx.appPermission.deleteMany({
+                where: { appId },
+            });
+
             await tx.appDefinition.delete({
                 where: { id: appId, organizationId },
             });

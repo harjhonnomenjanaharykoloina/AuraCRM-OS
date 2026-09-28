@@ -62,16 +62,13 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 // Validate Google OAuth credentials
-// Google OAuth configuration is validated at runtime rather than
-// during Next.js static/build-time page collection.
-// Railway injects production environment variables at runtime.
-if (
-    process.env.NODE_ENV === "production" &&
-    (!process.env.GOOGLE_ID || !process.env.GOOGLE_SECRET)
-) {
-    console.warn(
-        "GOOGLE_ID or GOOGLE_SECRET is missing. Google OAuth will be unavailable."
-    )
+if (process.env.NODE_ENV === "production") {
+    if (!process.env.GOOGLE_ID || !process.env.GOOGLE_SECRET) {
+        throw new Error(
+            "GOOGLE_ID and GOOGLE_SECRET are required in production. " +
+            "Set them in your environment variables."
+        )
+    }
 } else {
     if (!process.env.GOOGLE_ID) {
         console.warn(
@@ -150,17 +147,11 @@ export const betterAuthInstance = betterAuth({
         //   2. ${baseURL}/api/auth/callback/google (auto-generated from baseURL/BETTER_AUTH_URL)
         // Both createAuthorizationURL (for the auth URL) and
         // validateAuthorizationCode (for token exchange) use the same redirect URI.
-        ...(
-            process.env.GOOGLE_ID && process.env.GOOGLE_SECRET
-                ? {
-                      google: {
-                          clientId: process.env.GOOGLE_ID,
-                          clientSecret: process.env.GOOGLE_SECRET,
-                          redirectURI: process.env.GOOGLE_CALLBACK_URL,
-                      },
-                  }
-                : {}
-        ),
+        google: {
+            clientId: process.env.GOOGLE_ID!,
+            clientSecret: process.env.GOOGLE_SECRET!,
+            redirectURI: process.env.GOOGLE_CALLBACK_URL,
+        },
     },
     plugins: [
         username({

@@ -1,3 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "=============================================="
+echo " AuraCRM - Fix Google OAuth Session"
+echo "=============================================="
+
+ROOT="$(pwd)"
+FILE="$ROOT/src/lib/auth/proxy.ts"
+BACKUP="$FILE.backup-$(date +%Y%m%d-%H%M%S)"
+
+if [ ! -f "$FILE" ]; then
+    echo "❌ Fichier introuvable: $FILE"
+    exit 1
+fi
+
+echo
+echo "1. Backup du proxy actuel..."
+cp "$FILE" "$BACKUP"
+echo "✅ Backup: $BACKUP"
+
+echo
+echo "2. Remplacement de getProxySession..."
+cat > "$FILE" <<'PROXY'
 import { betterAuthInstance } from "@/auth";
 
 export async function getProxySession(req: Request): Promise<{
@@ -82,3 +106,33 @@ export async function getProxySession(req: Request): Promise<{
         return null;
     }
 }
+PROXY
+
+echo "✅ getProxySession utilise maintenant Better Auth directement."
+
+echo
+echo "3. Vérification du fichier..."
+sed -n '1,220p' "$FILE"
+
+echo
+echo "4. Vérification TypeScript..."
+npx tsc --noEmit
+
+echo
+echo "5. Vérification du build..."
+npm run build
+
+echo
+echo "=============================================="
+echo " ✅ CORRECTION TERMINÉE"
+echo "=============================================="
+echo
+echo "Backup conservé:"
+echo "$BACKUP"
+echo
+echo "Prochaine étape:"
+echo "  railway up"
+echo
+echo "Puis teste Google Sign-In sur:"
+echo "  https://auracrm-production.up.railway.app"
+echo

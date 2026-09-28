@@ -105,15 +105,16 @@ export async function GET(request: Request) {
 
         const userId = parseInt(user.id);
         const organizationId = user.organizationId;
+
+        if (organizationId == null || isNaN(userId) || isNaN(organizationId)) {
+            return NextResponse.json({ error: "Invalid session" }, { status: 400 });
+        }
+
         const queueIds = await getUserQueueIds(userId, organizationId);
         const userGroupId = (await db.user.findUnique({
             where: { id: userId },
             select: { groupId: true },
         }))?.groupId ?? null;
-
-        if (isNaN(userId) || isNaN(organizationId)) {
-            return NextResponse.json({ error: "Invalid session" }, { status: 400 });
-        }
 
         const { allowed, resetAt } = await checkRateLimit(dataRateLimiter, String(userId));
         if (!allowed) {

@@ -12,8 +12,8 @@ import type { Session as BetterAuthSession, User as BetterAuthUser } from "bette
  */
 export interface SessionUser extends BetterAuthUser {
     id: string;
-    organizationId: number;
-    userType: string;
+    organizationId?: number;
+    userType?: string;
     username?: string;
 }
 
@@ -44,7 +44,7 @@ export function getSessionUser(session: SessionLike): SessionUser | null {
 
     const u = user as Record<string, unknown>;
 
-    if (!u.id || u.organizationId == null || !u.userType) {
+    if (!u.id) {
         return null;
     }
 
@@ -60,23 +60,27 @@ export function parseSessionUser(session: SessionLike): SessionUser {
 
     if (!user) {
         throw new Error(
-            "Invalid session: Missing user ID or Organization ID. Please sign out and sign in again."
+            "Invalid session: Missing user ID. Please sign out and sign in again."
         );
     }
 
-    const organizationId =
-        typeof user.organizationId === "number"
-            ? user.organizationId
-            : parseInt(String(user.organizationId), 10);
+    if (user.organizationId !== undefined) {
+        const organizationId =
+            typeof user.organizationId === "number"
+                ? user.organizationId
+                : parseInt(String(user.organizationId), 10);
 
-    if (isNaN(organizationId)) {
-        throw new Error(
-            "Invalid session: IDs are not numbers. Please sign out and sign in again."
-        );
+        if (isNaN(organizationId)) {
+            throw new Error(
+                "Invalid session: Organization ID is not a number. Please sign out and sign in again."
+            );
+        }
+
+        return {
+            ...user,
+            organizationId,
+        };
     }
 
-    return {
-        ...user,
-        organizationId,
-    };
+    return user;
 }

@@ -13,7 +13,7 @@ export default async function SearchPage({
 }) {
     const session = await auth();
     const user = getSessionUser(session);
-    if (!user) redirect("/login");
+    if (!user || user.organizationId === undefined) redirect("/login");
 
     const { appApiName } = await params;
     const resolvedSearch = (await searchParams) || {};

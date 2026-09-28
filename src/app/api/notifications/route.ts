@@ -13,7 +13,7 @@ export async function GET() {
     const userId = Number(user.id ?? NaN);
     const organizationId = user.organizationId;
 
-    if (isNaN(userId) || isNaN(organizationId)) {
+    if (organizationId == null || isNaN(userId) || isNaN(organizationId)) {
         return NextResponse.json({ error: "Invalid session" }, { status: 400 });
     }
 
@@ -68,7 +68,7 @@ export async function PATCH(request: Request) {
     const userId = Number(user.id ?? NaN);
     const organizationId = user.organizationId;
 
-    if (isNaN(userId) || isNaN(organizationId)) {
+    if (organizationId == null || isNaN(userId) || isNaN(organizationId)) {
         return NextResponse.json({ error: "Invalid session" }, { status: 400 });
     }
 

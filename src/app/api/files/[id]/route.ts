@@ -29,7 +29,7 @@ export async function GET(
         const { id } = await params;
         const attachmentId = Number(id);
 
-        if (Number.isNaN(userId) || Number.isNaN(organizationId) || Number.isNaN(attachmentId)) {
+        if (organizationId == null || Number.isNaN(userId) || Number.isNaN(organizationId) || Number.isNaN(attachmentId)) {
             return NextResponse.json({ error: "Invalid request" }, { status: 400 });
         }
 
@@ -126,7 +126,7 @@ export async function DELETE(
         const { id } = await params;
         const attachmentId = Number(id);
 
-        if (Number.isNaN(userId) || Number.isNaN(organizationId) || Number.isNaN(attachmentId)) {
+        if (organizationId == null || Number.isNaN(userId) || Number.isNaN(organizationId) || Number.isNaN(attachmentId)) {
             return NextResponse.json({ error: "Invalid request" }, { status: 400 });
         }
 

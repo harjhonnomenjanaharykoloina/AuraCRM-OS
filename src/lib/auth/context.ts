@@ -21,13 +21,13 @@ export async function getUserContext(): Promise<UserContext> {
     const userId = parseInt(user.id, 10);
     const organizationId = user.organizationId;
 
-    if (isNaN(userId) || isNaN(organizationId)) {
+    if (organizationId == null || isNaN(userId) || isNaN(organizationId)) {
         throw new Error(
-            "Invalid session: IDs are not numbers. Please sign out and sign in again."
+            "Invalid session: Missing user ID or Organization ID. Please sign out and sign in again."
         );
     }
 
-    const context: UserContext = { userId, organizationId, userType: user.userType };
+    const context: UserContext = { userId, organizationId, userType: user.userType ?? "user" };
 
     const cached = await getOrSet<UserContext>(
         CacheKeys.userContext(userId, organizationId),

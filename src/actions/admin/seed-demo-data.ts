@@ -23,7 +23,7 @@ export async function seedDemoData() {
     const session = await auth();
     const user = getSessionUser(session);
 
-    if (!user || user.userType !== "admin") {
+    if (!user || user.userType !== "admin" || user.organizationId === undefined) {
         return { success: false, error: "Unauthorized" };
     }
 

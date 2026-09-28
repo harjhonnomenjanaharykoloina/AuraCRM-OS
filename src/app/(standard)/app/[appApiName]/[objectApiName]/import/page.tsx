@@ -16,7 +16,7 @@ export default async function BulkImportPage({
     const { appApiName, objectApiName } = await params;
     const session = await auth();
     const user = getSessionUser(session);
-    if (!user) return null;
+    if (!user || user.organizationId === undefined) return null;
     const organizationId = user.organizationId;
     const userId = parseInt(user.id);
 

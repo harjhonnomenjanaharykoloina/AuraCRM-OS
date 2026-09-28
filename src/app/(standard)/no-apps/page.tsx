@@ -12,7 +12,7 @@ import { getSessionUser } from "@/lib/auth/types";
 export default async function NoAppsPage() {
     const session = await auth();
     const user = getSessionUser(session);
-    if (!user) redirect("/login");
+    if (!user || user.organizationId === undefined || user.userType === undefined) redirect("/login");
 
     const isAdmin = user.userType === "admin";
 

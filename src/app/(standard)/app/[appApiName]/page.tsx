@@ -11,7 +11,7 @@ export default async function AppPage({
 }) {
     const session = await auth();
     const user = getSessionUser(session);
-    if (!user) redirect("/login");
+    if (!user || user.organizationId === undefined || user.userType === undefined) redirect("/login");
 
     const { appApiName } = await params;
     const userId = parseInt(user.id);

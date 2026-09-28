@@ -16,7 +16,7 @@ export async function GET(
         const { objectApiName, jobId } = await params;
         const session = await auth();
         const user = getSessionUser(session);
-        if (!user) {
+        if (!user || user.organizationId === undefined) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

@@ -125,22 +125,93 @@ describe("getProxySession", () => {
             expect(result).toBeNull();
         });
 
-        it("returns null when organizationId is missing or non-numeric", async () => {
+        it("returns user with undefined organizationId when field is missing", async () => {
             mockJwtVerify.mockResolvedValueOnce({
                 payload: { user: { id: "u1", userType: "admin" } },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).toBeNull();
+            expect(result).not.toBeNull();
+            expect(result?.user.organizationId).toBeUndefined();
+            expect(result).toEqual({
+                user: {
+                    id: "u1",
+                    email: undefined,
+                    name: undefined,
+                    username: undefined,
+                    organizationId: undefined,
+                    userType: "admin",
+                },
+            });
         });
 
-        it("returns null when userType is missing", async () => {
+        it("returns user with undefined userType when field is missing", async () => {
             mockJwtVerify.mockResolvedValueOnce({
                 payload: { user: { id: "u1", organizationId: 1 } },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).toBeNull();
+            expect(result).not.toBeNull();
+            expect(result?.user.userType).toBeUndefined();
+            expect(result).toEqual({
+                user: {
+                    id: "u1",
+                    email: undefined,
+                    name: undefined,
+                    username: undefined,
+                    organizationId: 1,
+                    userType: undefined,
+                },
+            });
+        });
+
+        it("returns user with undefined fields for Google OAuth users", async () => {
+            mockJwtVerify.mockResolvedValueOnce({
+                payload: { user: { id: "gcal-123", email: "user@gmail.com", name: "Google User" } },
+            });
+
+            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+            expect(result).not.toBeNull();
+            expect(result?.user.organizationId).toBeUndefined();
+            expect(result?.user.userType).toBeUndefined();
+            expect(result).toEqual({
+                user: {
+                    id: "gcal-123",
+                    email: "user@gmail.com",
+                    name: "Google User",
+                    username: undefined,
+                    organizationId: undefined,
+                    userType: undefined,
+                },
+            });
+        });
+
+        it("handles Google OAuth user with null organizationId", async () => {
+            mockJwtVerify.mockResolvedValueOnce({
+                payload: {
+                    user: {
+                        id: "gcal-456",
+                        organizationId: null,
+                        userType: null,
+                        email: "another@gmail.com",
+                    },
+                },
+            });
+
+            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+            expect(result).not.toBeNull();
+            expect(result?.user.organizationId).toBeUndefined();
+            expect(result?.user.userType).toBeUndefined();
+            expect(result).toEqual({
+                user: {
+                    id: "gcal-456",
+                    email: "another@gmail.com",
+                    name: undefined,
+                    username: undefined,
+                    organizationId: undefined,
+                    userType: undefined,
+                },
+            });
         });
 
         it("maps sub claim to user.id when user.id is absent", async () => {

@@ -25,11 +25,7 @@ RUN npx prisma generate
 # In production, supply real values via --build-arg JWT_SECRET=... --build-arg BETTER_AUTH_SECRET=...
 ARG JWT_SECRET="build-time-not-valid-for-production"
 ARG BETTER_AUTH_SECRET="build-time-not-valid-for-production"
-ARG GOOGLE_ID=""
-ARG GOOGLE_SECRET=""
-ARG BETTER_AUTH_URL=""
-ARG GOOGLE_CALLBACK_URL=""
-RUN JWT_SECRET=${JWT_SECRET} BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET} GOOGLE_ID=${GOOGLE_ID} GOOGLE_SECRET=${GOOGLE_SECRET} BETTER_AUTH_URL=${BETTER_AUTH_URL} GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL} pnpm run build
+RUN JWT_SECRET=${JWT_SECRET} BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET} pnpm run build
 
 FROM node:20-alpine AS runner
 

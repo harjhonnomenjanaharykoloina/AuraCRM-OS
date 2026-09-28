@@ -12,13 +12,13 @@ import {
 import { Prisma, OwnerType } from "@prisma/client";
 import { getDateOnlyRange, parseDateTimeValue } from "@/lib/temporal";
 
-async function checkAuth(): Promise<SessionUser> {
+async function checkAuth(): Promise<SessionUser & { organizationId: number }> {
     const session = await auth();
     const user = getSessionUser(session);
-    if (!user) {
+    if (!user || user.organizationId === undefined) {
         throw new Error("Unauthorized");
     }
-    return user;
+    return user as SessionUser & { organizationId: number };
 }
 
 type WidgetFilter = {

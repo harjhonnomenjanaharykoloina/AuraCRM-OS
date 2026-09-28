@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const userId = parseInt(user.id);
     const organizationId = user.organizationId;
 
-    if (isNaN(userId) || isNaN(organizationId)) {
+    if (organizationId == null || isNaN(userId) || isNaN(organizationId)) {
         return NextResponse.json({ error: "Invalid session" }, { status: 400 });
     }
 
