@@ -67,7 +67,7 @@ export function CleanMinimalSignIn({
     const t = useTranslations();
 
     const signInWithGoogle = async () => {
-        await authClient.signIn.social({ provider: "google", callbackURL: "/app/dashboard" });
+        await authClient.signIn.social({ provider: "google", callbackURL: "/no-apps" });
     };
 
     const handleGoogleSignIn = async () => {

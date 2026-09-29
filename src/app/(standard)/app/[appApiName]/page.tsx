@@ -20,7 +20,7 @@ export default async function AppPage({
     const currentApp = apps.find((app) => app.apiName === appApiName);
 
     if (!currentApp) {
-        // If appApiName is invalid (e.g. "/app/dashboard"), redirect to first available app
+// If appApiName is invalid, redirect to first available app
         if (apps.length > 0) {
             redirect(`/app/${apps[0].apiName}`);
         }

@@ -12,7 +12,7 @@ export default async function AdminLayout({
     const user = getSessionUser(session);
     if (!user) redirect("/login");
 
-    if (user.userType !== "admin") redirect("/app/dashboard");
+    if (user.userType !== "admin") redirect("/no-apps");
 
     return <AdminShell user={user}>{children}</AdminShell>;
 }

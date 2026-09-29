@@ -83,7 +83,7 @@ export function AppHeader({
                     </Button>
 
                     <Link
-                        href={defaultAppApiName ? `/app/${defaultAppApiName}/dashboard` : "/app/dashboard"}
+                        href={defaultAppApiName ? `/app/${defaultAppApiName}/dashboard` : "/no-apps"}
                         className="flex shrink-0 items-center gap-2 font-bold text-xl tracking-tight text-foreground transition-opacity hover:opacity-80"
                     >
                         <Image src="/logo.png" alt={t("public.appName")} className="h-6 w-6" width={24} height={24} />

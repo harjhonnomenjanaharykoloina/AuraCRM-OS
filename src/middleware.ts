@@ -117,11 +117,11 @@ export default async function proxy(req: Request) {
     }
 
     if (isLoggedIn && isAuthLandingRoute) {
-        return NextResponse.redirect(new URL("/app/dashboard", req.url));
+        return NextResponse.redirect(new URL("/no-apps", req.url));
     }
 
     if (isAdminRoute && userType !== "admin") {
-        return NextResponse.redirect(new URL("/app/dashboard", req.url));
+        return NextResponse.redirect(new URL("/no-apps", req.url));
     }
 
     return NextResponse.next();

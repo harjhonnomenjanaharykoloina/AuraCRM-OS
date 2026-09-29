@@ -25,7 +25,7 @@ describe("middleware - security", () => {
         });
 
         it("redirects unauthenticated requests to non-public routes to /login", async () => {
-            const res = await proxy(makeRequest("http://localhost/app/dashboard"));
+            const res = await proxy(makeRequest("http://localhost/no-apps"));
             expect(res.status).toBe(307);
             expect(res.headers.get("location")).toMatch(/\/login$/);
         });
@@ -44,33 +44,33 @@ describe("middleware - security", () => {
             });
         });
 
-        it("redirects authenticated users visiting /login to /app/dashboard", async () => {
+        it("redirects authenticated users visiting /login to /no-apps", async () => {
             const res = await proxy(makeRequest("http://localhost/login"));
             expect(res.status).toBe(307);
-            expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
+            expect(res.headers.get("location")).toMatch(/\/no-apps$/);
         });
 
-        it("redirects authenticated users visiting /register to /app/dashboard", async () => {
+        it("redirects authenticated users visiting /register to /no-apps", async () => {
             const res = await proxy(makeRequest("http://localhost/register"));
             expect(res.status).toBe(307);
-            expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
+            expect(res.headers.get("location")).toMatch(/\/no-apps$/);
         });
 
-        it("redirects authenticated users visiting / to /app/dashboard", async () => {
+        it("redirects authenticated users visiting / to /no-apps", async () => {
             const res = await proxy(makeRequest("http://localhost/"));
             expect(res.status).toBe(307);
-            expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
+            expect(res.headers.get("location")).toMatch(/\/no-apps$/);
         });
     });
 
     describe("admin route access control", () => {
-        it("redirects non-admin users visiting /admin to /app/dashboard", async () => {
+        it("redirects non-admin users visiting /admin to /no-apps", async () => {
             mockGetProxySession.mockResolvedValue({
                 user: { id: "1", organizationId: 1, userType: "standard" },
             });
             const res = await proxy(makeRequest("http://localhost/admin/users"));
             expect(res.status).toBe(307);
-            expect(res.headers.get("location")).toMatch(/\/app\/dashboard$/);
+            expect(res.headers.get("location")).toMatch(/\/no-apps$/);
         });
 
         it("allows admin users to access /admin routes", async () => {
@@ -85,7 +85,7 @@ describe("middleware - security", () => {
             mockGetProxySession.mockResolvedValue({
                 user: { id: "1", organizationId: 1, userType: "standard" },
             });
-            const res = await proxy(makeRequest("http://localhost/app/dashboard"));
+            const res = await proxy(makeRequest("http://localhost/app/crm/dashboard"));
             expect(res.status).toBe(200);
         });
     });
@@ -105,7 +105,7 @@ describe("middleware - security", () => {
         });
 
         it("still runs the middleware for application routes", () => {
-            expect(regex.test("/app/dashboard")).toBe(true);
+            expect(regex.test("/no-apps")).toBe(true);
             expect(regex.test("/admin/users")).toBe(true);
             expect(regex.test("/login")).toBe(true);
             expect(regex.test("/register")).toBe(true);

@@ -73,7 +73,7 @@ export function CleanMinimalRegister({
     const t = useTranslations();
 
     const signUpWithGoogle = async () => {
-        await authClient.signIn.social({ provider: "google", callbackURL: "/app/dashboard" });
+        await authClient.signIn.social({ provider: "google", callbackURL: "/no-apps" });
     };
 
     const handleGoogleSignUp = async () => {

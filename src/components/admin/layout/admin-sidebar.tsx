@@ -221,7 +221,7 @@ export function AdminSidebar({ sidebarOpen, setSidebarOpen }: AdminSidebarProps)
                     className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                     asChild
                 >
-                    <Link href="/app/dashboard">
+                    <Link href="/no-apps">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         {t("admin.sidebar.backToApp")}
                     </Link>
