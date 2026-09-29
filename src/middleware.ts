@@ -4,6 +4,15 @@ import { authRateLimiter, getClientIp } from "@/lib/rate-limit-store";
 
 const MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// Health-probe paths that must never reach session lookup, rate limiting, or
+// auth config validation. Railway's healthcheck hits /api/health; if that
+// throws, the replica is never promoted and every request 404s at the edge.
+const HEALTH_PROBE_PATHS = new Set([
+    "/api/health",
+    "/api/auth/health",
+    "/api/auth/healthz",
+]);
+
 function isExcludedAuthPath(pathname: string): boolean {
     if (pathname === "/api/auth/health" || pathname === "/api/auth/healthz") {
         return true;
@@ -60,6 +69,19 @@ function logSecurityEvent(event: string, details: Record<string, unknown>): void
 
 export default async function proxy(req: Request) {
     const { pathname } = new URL(req.url);
+
+    // Short-circuit health probes BEFORE any session lookup, rate limiting,
+    // or auth config validation. A misconfigured production deployment
+    // (e.g. missing BETTER_AUTH_URL) would otherwise throw inside
+    // getProxySession -> assertAuthRuntimeEnv, producing a 500 that fails
+    // the Railway healthcheck and 404s every request at the edge.
+    if (HEALTH_PROBE_PATHS.has(pathname)) {
+        return NextResponse.json(
+            { status: "ok", timestamp: new Date().toISOString() },
+            { status: 200 }
+        );
+    }
+
     const isAuthApiRoute = pathname.startsWith("/api/auth");
 
     if (isAuthApiRoute && !isExcludedAuthPath(pathname)) {
@@ -108,7 +130,7 @@ export default async function proxy(req: Request) {
 
     const isAdminRoute = pathname.startsWith("/admin");
 
-    if (!isLoggedIn && isApiRoute && !isAuthApiRoute && pathname !== "/api/health") {
+    if (!isLoggedIn && isApiRoute && !isAuthApiRoute) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
