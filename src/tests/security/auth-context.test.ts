@@ -4,6 +4,7 @@ const mockAuth = vi.hoisted(() => vi.fn());
 
 vi.mock("@/auth", () => ({
     auth: mockAuth,
+    assertAuthRuntimeEnv: vi.fn(),
 }));
 
 import { getUserContext, requireAdmin } from "@/lib/auth/context";

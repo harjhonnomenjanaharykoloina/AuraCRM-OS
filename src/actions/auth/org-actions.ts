@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { betterAuthInstance } from "@/auth";
+import { assertAuthRuntimeEnv, betterAuthInstance } from "@/auth";
 import { getUserContext } from "@/lib/auth/context";
 
 export type OrganizationSummary = {
@@ -63,6 +63,8 @@ export async function switchOrganization(targetOrganizationId: number): Promise<
         }
 
         const { headers } = await import("next/headers");
+
+        assertAuthRuntimeEnv();
 
         await betterAuthInstance.api.updateSession({
             headers: await headers(),

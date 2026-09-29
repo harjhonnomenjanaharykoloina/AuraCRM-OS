@@ -52,6 +52,7 @@ const { mockDb, resetMockDb } = vi.hoisted(() => {
 vi.mock("@/lib/db", () => ({ db: mockDb }));
 vi.mock("@/auth", () => ({
     auth: vi.fn().mockResolvedValue({ user: { id: "1", organizationId: 1, userType: "admin" } }),
+    assertAuthRuntimeEnv: vi.fn(),
 }));
 vi.mock("@/lib/permissions", () => ({
     checkPermission: vi.fn().mockResolvedValue(true),

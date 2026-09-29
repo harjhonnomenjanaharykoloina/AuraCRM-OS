@@ -25,6 +25,7 @@ vi.mock("@/auth", () => ({
     auth: vi.fn().mockResolvedValue({
         user: { id: "1", organizationId: 1, userType: "admin" },
     }),
+    assertAuthRuntimeEnv: vi.fn(),
     betterAuthInstance: { api: { updateSession: mockUpdateSession } },
 }));
 vi.mock("@/lib/auth/context", () => ({ getUserContext: mockGetUserContext }));

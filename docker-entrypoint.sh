@@ -19,14 +19,14 @@ if [ -z "$value" ]; then
     echo "WARNING: BETTER_AUTH_URL environment variable is not set. OAuth redirect URIs may be incorrect."
 fi
 
-eval "value=\$GOOGLE_ID"
-if [ -z "$value" ]; then
-    echo "WARNING: GOOGLE_ID environment variable is not set. Google Sign-In won't work."
+eval "google_id=\${GOOGLE_CLIENT_ID:-\$GOOGLE_ID}"
+if [ -z "$google_id" ]; then
+    echo "WARNING: Neither GOOGLE_CLIENT_ID nor GOOGLE_ID is set. Google Sign-In won't work."
 fi
 
-eval "value=\$GOOGLE_SECRET"
-if [ -z "$value" ]; then
-    echo "WARNING: GOOGLE_SECRET environment variable is not set. Google Sign-In won't work."
+eval "google_secret=\${GOOGLE_CLIENT_SECRET:-\$GOOGLE_SECRET}"
+if [ -z "$google_secret" ]; then
+    echo "WARNING: Neither GOOGLE_CLIENT_SECRET nor GOOGLE_SECRET is set. Google Sign-In won't work."
 fi
 
 eval "value=\$EMAIL_ENCRYPTION_KEY"

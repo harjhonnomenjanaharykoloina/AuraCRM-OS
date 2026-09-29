@@ -1,9 +1,13 @@
-import { handlers } from "@/auth";
+import { assertAuthRuntimeEnv, handlers } from "@/auth";
 
-export const GET = handlers.GET;
+export async function GET(req: Request) {
+    assertAuthRuntimeEnv();
+    return handlers.GET(req);
+}
 
 export async function POST(req: Request) {
     try {
+        assertAuthRuntimeEnv();
         return await handlers.POST(req);
     } catch (e: any) {
         const err = e?.cause ? e.cause : e;

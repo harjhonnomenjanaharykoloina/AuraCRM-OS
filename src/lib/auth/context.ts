@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { assertAuthRuntimeEnv, auth } from "@/auth";
 import { parseSessionUser } from "@/lib/auth/types";
 import { CacheKeys, getOrSet } from "@/lib/cache";
 import { logDebug, logWarn } from "@/lib/logger";
@@ -12,6 +12,8 @@ export interface UserContext {
 const CONTEXT_CACHE_TTL_SECONDS = 60;
 
 export async function getUserContext(): Promise<UserContext> {
+    assertAuthRuntimeEnv();
+
     const session = await auth();
     if (!session?.user) {
         throw new Error("Unauthorized");

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mockGetSession = vi.hoisted(() => vi.fn());
 
 vi.mock("@/auth", () => ({
+    assertAuthRuntimeEnv: vi.fn(),
     betterAuthInstance: {
         api: { getSession: mockGetSession },
     },

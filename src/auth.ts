@@ -99,9 +99,28 @@ const trustedOrigins = Array.from(
     )
 )
 
-function assertProductionEnv(): void {
+/**
+ * Validates production auth configuration. Invoked from request/auth
+ * entrypoints rather than module load, so `next build` — which evaluates
+ * server modules with NODE_ENV=production but without runtime secrets —
+ * can never fail on missing environment variables.
+ */
+export function assertAuthRuntimeEnv(): void {
     if (!isProduction) {
         return
+    }
+
+    // Google Sign-In is optional: `socialProviders.google` is omitted entirely
+    // when the credentials are absent, so warn rather than fail the process.
+    if (!googleClientId) {
+        logWarn(
+            "[auth] GOOGLE_CLIENT_ID (or GOOGLE_ID) is not set. Google Sign-In will not be available."
+        )
+    }
+    if (!googleClientSecret) {
+        logWarn(
+            "[auth] GOOGLE_CLIENT_SECRET (or GOOGLE_SECRET) is not set. Google Sign-In will not be available."
+        )
     }
 
     const missing: string[] = []
@@ -112,12 +131,6 @@ function assertProductionEnv(): void {
     if (!configuredAuthUrl) {
         missing.push(`BETTER_AUTH_URL (expected ${PRODUCTION_ORIGIN})`)
     }
-    if (!googleClientId) {
-        missing.push("GOOGLE_CLIENT_ID (or GOOGLE_ID)")
-    }
-    if (!googleClientSecret) {
-        missing.push("GOOGLE_CLIENT_SECRET (or GOOGLE_SECRET)")
-    }
 
     if (missing.length > 0) {
         throw new Error(
@@ -126,9 +139,6 @@ function assertProductionEnv(): void {
         )
     }
 }
-
-// Fail loudly in production if required auth configuration is absent.
-assertProductionEnv()
 
 // In development, warn about missing or weak/placeholder secrets without failing.
 if (!isProduction) {
@@ -143,19 +153,6 @@ if (!isProduction) {
             "Please replace it with a strong secret generated via: openssl rand -base64 32"
         )
     }
-}
-
-// Validate Google OAuth credentials. Configuration is validated at runtime rather
-// than during Next.js static/build-time page collection.
-if (!googleClientId) {
-    console.warn(
-        "[auth] GOOGLE_CLIENT_ID (or GOOGLE_ID) is not set. Google Sign-In will not be available."
-    )
-}
-if (!googleClientSecret) {
-    console.warn(
-        "[auth] GOOGLE_CLIENT_SECRET (or GOOGLE_SECRET) is not set. Google Sign-In will not be available."
-    )
 }
 
 if (hasGoogleOAuth) {
@@ -242,11 +239,17 @@ function buildAuthFailureLogger(message: string): AuthErrorHandler {
     }
 }
 
+// Better Auth throws at construction time when no secret is provided. During
+// `next build` no real secret exists, so fall back to an obviously-fake
+// placeholder; assertAuthRuntimeEnv() guarantees real deployments never use it.
+const BUILD_TIME_PLACEHOLDER_SECRET = "build-time-placeholder-secret-not-valid-for-production"
+const effectiveAuthSecret = authSecret ?? BUILD_TIME_PLACEHOLDER_SECRET
+
 export const betterAuthInstance = betterAuth({
     database: prismaAdapter(db, {
         provider: "postgresql",
     }),
-    secret: authSecret,
+    secret: effectiveAuthSecret,
     baseURL: authBaseUrl,
     basePath: "/api/auth",
     trustedOrigins,

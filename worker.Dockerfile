@@ -4,9 +4,11 @@ RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-ENV PNPM_HOME="/pnpm" \
-    PATH="$PNPM_HOME:$PATH" \
-    PRISMA_ENABLE_DOWNLOADS="true" \
+ENV PNPM_HOME="/pnpm"
+
+ENV PATH="$PNPM_HOME:$PATH"
+
+ENV PRISMA_ENABLE_DOWNLOADS="true" \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN npm install -g pnpm@9.15.0

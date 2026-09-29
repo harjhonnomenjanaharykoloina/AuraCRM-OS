@@ -4,9 +4,11 @@ RUN apk add --no-cache libc6-compat openssl
 
 WORKDIR /app
 
-ENV PNPM_HOME="/pnpm" \
-    PATH="$PNPM_HOME:$PATH" \
-    PRISMA_ENABLE_DOWNLOADS="true" \
+ENV PNPM_HOME="/pnpm"
+
+ENV PATH="$PNPM_HOME:$PATH"
+
+ENV PRISMA_ENABLE_DOWNLOADS="true" \
     NEXT_TELEMETRY_DISABLED=1
 
 RUN npm install -g pnpm@9.15.0
@@ -23,15 +25,13 @@ RUN npx prisma generate
 
 RUN pnpm run build:worker
 
-# Build-time secrets are passed as build args, never baked into the final image.
-# In production, supply real values via --build-arg JWT_SECRET=... --build-arg BETTER_AUTH_SECRET=...
-ARG JWT_SECRET="build-time-not-valid-for-production"
-ARG BETTER_AUTH_SECRET="build-time-not-valid-for-production"
-ARG GOOGLE_ID=""
-ARG GOOGLE_SECRET=""
-ARG BETTER_AUTH_URL=""
-ARG GOOGLE_CALLBACK_URL=""
-RUN JWT_SECRET=${JWT_SECRET} BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET} GOOGLE_ID=${GOOGLE_ID} GOOGLE_SECRET=${GOOGLE_SECRET} BETTER_AUTH_URL=${BETTER_AUTH_URL} GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL} pnpm run build
+# Build-time placeholder values. `next build` does not require real secrets:
+# the app validates auth configuration lazily at runtime (see docker-entrypoint.sh
+# and src/auth.ts), and real values are injected by Railway at container start.
+# Nothing secret is declared via ARG/ENV or baked into the image.
+RUN BETTER_AUTH_SECRET=build-time-not-valid-for-production \
+    BETTER_AUTH_URL=https://auracrm-production.up.railway.app \
+    pnpm run build
 
 FROM node:20-alpine AS runner
 

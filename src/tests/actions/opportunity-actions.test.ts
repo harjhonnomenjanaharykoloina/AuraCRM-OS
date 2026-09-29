@@ -70,7 +70,7 @@ const { mockDb, resetMockDb, mockAuth } = vi.hoisted(() => {
     return { mockDb, resetMockDb, mockAuth: vi.fn() };
 });
 
-vi.mock("@/auth", () => ({ auth: mockAuth }));
+vi.mock("@/auth", () => ({ auth: mockAuth, assertAuthRuntimeEnv: vi.fn() }));
 vi.mock("@/lib/db", () => ({ db: mockDb }));
 vi.mock("@/lib/permissions", () => ({
     checkPermission: vi.fn(),
