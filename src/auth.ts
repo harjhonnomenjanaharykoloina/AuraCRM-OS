@@ -288,6 +288,10 @@ export const betterAuthInstance = betterAuth({
         },
     },
     user: {
+        id: {
+            type: "number",
+            input: false,
+        },
         additionalFields: {
             organizationId: {
                 type: "number",
