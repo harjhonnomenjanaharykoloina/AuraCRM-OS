@@ -1,15 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockJwtVerify = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
 
-vi.mock("jose", () => ({
-    jwtVerify: mockJwtVerify,
+vi.mock("@/auth", () => ({
+    betterAuthInstance: {
+        api: { getSession: mockGetSession },
+    },
 }));
 
 import { getProxySession } from "@/lib/auth/proxy";
-
-const SECRET = "better-auth-secret-32-chars-a";
-const OTHER_SECRET = "jwt-secret-32-chars-bbbbbb";
 
 function makeRequest(cookieHeader?: string): Request {
     const init: Record<string, string> = {};
@@ -21,118 +20,81 @@ function makeRequest(cookieHeader?: string): Request {
 
 describe("getProxySession", () => {
     beforeEach(() => {
-        vi.stubEnv("BETTER_AUTH_SECRET", SECRET);
-        vi.stubEnv("JWT_SECRET", OTHER_SECRET);
-        mockJwtVerify.mockReset();
+        mockGetSession.mockReset();
     });
 
-    afterEach(() => {
-        vi.unstubAllEnvs();
-    });
-
-    describe("secret resolution", () => {
-        it("returns null when neither BETTER_AUTH_SECRET nor JWT_SECRET is set", async () => {
-            vi.stubEnv("BETTER_AUTH_SECRET", undefined as any);
-            vi.stubEnv("JWT_SECRET", undefined as any);
+    describe("error handling", () => {
+        it("returns null when getSession throws an error", async () => {
+            mockGetSession.mockRejectedValueOnce(new Error("session fetch failed"));
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
 
             expect(result).toBeNull();
-            expect(mockJwtVerify).not.toHaveBeenCalled();
-        });
-
-        it("uses BETTER_AUTH_SECRET when both are present", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u1", organizationId: 1, userType: "admin" } },
-            });
-
-            await getProxySession(makeRequest("better-auth.session_data=tok"));
-
-            const usedSecret = new TextDecoder().decode(mockJwtVerify.mock.calls[0][1]);
-            expect(usedSecret).toBe(SECRET);
-            expect(usedSecret).not.toBe(OTHER_SECRET);
-        });
-
-        it("falls back to JWT_SECRET when BETTER_AUTH_SECRET is absent", async () => {
-            vi.stubEnv("BETTER_AUTH_SECRET", undefined as any);
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u1", organizationId: 1, userType: "admin" } },
-            });
-
-            await getProxySession(makeRequest("better-auth.session_data=tok"));
-
-            const usedSecret = new TextDecoder().decode(mockJwtVerify.mock.calls[0][1]);
-            expect(usedSecret).toBe(OTHER_SECRET);
+            expect(mockGetSession).toHaveBeenCalledTimes(1);
         });
     });
 
-    describe("session cookie extraction", () => {
-        it("returns null when no session cookie is present", async () => {
+    describe("session cookie presence", () => {
+        it("returns null when no cookie header is present", async () => {
+            mockGetSession.mockResolvedValueOnce(null);
+
             const result = await getProxySession(makeRequest());
+
             expect(result).toBeNull();
-            expect(mockJwtVerify).not.toHaveBeenCalled();
+            expect(mockGetSession).toHaveBeenCalledWith({
+                headers: makeRequest().headers,
+            });
         });
 
         it("returns null when the request has no cookie header at all", async () => {
+            mockGetSession.mockResolvedValueOnce(null);
+
             const req = new Request("http://localhost/dashboard");
             expect(req.headers.get("cookie")).toBeNull();
+
             const result = await getProxySession(req);
+
             expect(result).toBeNull();
-        });
-
-        it("reconstructs a chunked session cookie by index order", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u1", organizationId: 1, userType: "admin" } },
-            });
-
-            // Chunks intentionally supplied out of order to verify sorting.
-            const cookie =
-                "better-auth.session_data-1=payload2; better-auth.session_data-0=payload1";
-            await getProxySession(makeRequest(cookie));
-
-            expect(mockJwtVerify).toHaveBeenCalledTimes(1);
-            expect(mockJwtVerify.mock.calls[0][0]).toBe("payload1payload2");
-        });
-
-        it("reconstructs chunked cookies carrying a __Host- prefix", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u2", organizationId: 3, userType: "standard" } },
-            });
-
-            const cookie =
-                "__Host-better-auth.session_data-0=partA; __Host-better-auth.session_data-1=partB";
-            await getProxySession(makeRequest(cookie));
-
-            expect(mockJwtVerify.mock.calls[0][0]).toBe("partApartB");
+            expect(mockGetSession).toHaveBeenCalledWith({ headers: req.headers });
         });
     });
 
-    describe("JWT verification & payload mapping", () => {
-        it("returns null when the JWT verification fails", async () => {
-            mockJwtVerify.mockRejectedValueOnce(new Error("JWT expired"));
-
-            const result = await getProxySession(makeRequest("better-auth.session_data=bad"));
-            expect(result).toBeNull();
-            expect(mockJwtVerify).toHaveBeenCalledTimes(1);
-        });
-
-        it("returns null when the payload has no recognizable user id", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { organizationId: 1, userType: "admin" } },
-            });
+    describe("no session", () => {
+        it("returns null when getSession returns null", async () => {
+            mockGetSession.mockResolvedValueOnce(null);
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("session with no user", () => {
+        it("returns null when session.user is missing", async () => {
+            mockGetSession.mockResolvedValueOnce({ user: null });
+
+            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+
             expect(result).toBeNull();
         });
 
+        it("returns null when session is an empty object", async () => {
+            mockGetSession.mockResolvedValueOnce({});
+
+            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+
+            expect(result).toBeNull();
+        });
+    });
+
+    describe("field normalization", () => {
         it("returns user with undefined organizationId when field is missing", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u1", userType: "admin" } },
+            mockGetSession.mockResolvedValueOnce({
+                user: { id: "u1", userType: "admin" },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).not.toBeNull();
-            expect(result?.user.organizationId).toBeUndefined();
+
             expect(result).toEqual({
                 user: {
                     id: "u1",
@@ -146,13 +108,12 @@ describe("getProxySession", () => {
         });
 
         it("returns user with undefined userType when field is missing", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u1", organizationId: 1 } },
+            mockGetSession.mockResolvedValueOnce({
+                user: { id: "u1", organizationId: 1 },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).not.toBeNull();
-            expect(result?.user.userType).toBeUndefined();
+
             expect(result).toEqual({
                 user: {
                     id: "u1",
@@ -164,16 +125,16 @@ describe("getProxySession", () => {
                 },
             });
         });
+    });
 
-        it("returns user with undefined fields for Google OAuth users", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "gcal-123", email: "user@gmail.com", name: "Google User" } },
+    describe("Google OAuth user with missing fields", () => {
+        it("returns user with undefined org/userType fields", async () => {
+            mockGetSession.mockResolvedValueOnce({
+                user: { id: "gcal-123", email: "user@gmail.com", name: "Google User" },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).not.toBeNull();
-            expect(result?.user.organizationId).toBeUndefined();
-            expect(result?.user.userType).toBeUndefined();
+
             expect(result).toEqual({
                 user: {
                     id: "gcal-123",
@@ -186,22 +147,18 @@ describe("getProxySession", () => {
             });
         });
 
-        it("handles Google OAuth user with null organizationId", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: {
-                    user: {
-                        id: "gcal-456",
-                        organizationId: null,
-                        userType: null,
-                        email: "another@gmail.com",
-                    },
+        it("returns undefined org/userType when both are null", async () => {
+            mockGetSession.mockResolvedValueOnce({
+                user: {
+                    id: "gcal-456",
+                    email: "another@gmail.com",
+                    organizationId: null,
+                    userType: null,
                 },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).not.toBeNull();
-            expect(result?.user.organizationId).toBeUndefined();
-            expect(result?.user.userType).toBeUndefined();
+
             expect(result).toEqual({
                 user: {
                     id: "gcal-456",
@@ -213,36 +170,68 @@ describe("getProxySession", () => {
                 },
             });
         });
+    });
 
-        it("maps sub claim to user.id when user.id is absent", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { sub: "sub-user", user: { organizationId: 9, userType: "manager" } },
+    describe("coercion", () => {
+        it("coerces numeric string organizationId to number", async () => {
+            mockGetSession.mockResolvedValueOnce({
+                user: { id: "u1", organizationId: "15", userType: "standard" },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).toEqual({
-                user: {
-                    id: "sub-user",
-                    email: undefined,
-                    name: undefined,
-                    username: undefined,
-                    organizationId: 9,
-                    userType: "manager",
-                },
-            });
+
+            expect(result?.user.organizationId).toBe(15);
+            expect(result?.user.organizationId).toBeTypeOf("number");
         });
 
-        it("returns the full user object with a valid JWT", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: {
-                    user: {
-                        id: "user-42",
-                        organizationId: 7,
-                        userType: "admin",
-                        email: "admin@example.com",
-                        name: "Admin User",
-                        username: "admin_user",
-                    },
+        it("coerces numeric string organizationId to number even when other fields present", async () => {
+            mockGetSession.mockResolvedValueOnce({
+                user: {
+                    id: "u2",
+                    email: "user@example.com",
+                    name: "Test User",
+                    username: "testuser",
+                    organizationId: "42",
+                    userType: "standard",
+                },
+            });
+
+            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+
+            expect(result).toEqual({
+                user: {
+                    id: "u2",
+                    email: "user@example.com",
+                    name: "Test User",
+                    username: "testuser",
+                    organizationId: 42,
+                    userType: "standard",
+                },
+            });
+            expect(result?.user.organizationId).toBeTypeOf("number");
+        });
+
+        it("returns undefined organizationId when string is non-numeric", async () => {
+            mockGetSession.mockResolvedValueOnce({
+                user: { id: "u3", organizationId: "not-a-number", userType: "admin" },
+            });
+
+            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
+
+            expect(result?.user.organizationId).toBeUndefined();
+        });
+    });
+
+    describe("full user object and valid session", () => {
+        it("returns the full user object with all fields present", async () => {
+            mockGetSession.mockResolvedValueOnce({
+                user: {
+                    id: "user-42",
+                    organizationId: 7,
+                    userType: "admin",
+                    email: "admin@example.com",
+                    name: "Admin User",
+                    username: "admin_user",
                 },
             });
 
@@ -260,68 +249,25 @@ describe("getProxySession", () => {
             });
         });
 
-        it("coerces a numeric string organizationId to a number", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { user: { id: "u1", organizationId: "15", userType: "standard" } },
-            });
-
-            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-            expect(result).toEqual({
+        it("returns properly typed session data for a valid session", async () => {
+            mockGetSession.mockResolvedValueOnce({
                 user: {
-                    id: "u1",
-                    email: undefined,
-                    name: undefined,
-                    username: undefined,
-                    organizationId: 15,
-                    userType: "standard",
-                },
-            });
-            expect(result?.user.organizationId).toBeTypeOf("number");
-        });
-
-        it("supports legacy flat claims placed at the JWT root", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: {
-                    id: "legacy-1",
-                    organizationId: 4,
-                    userType: "admin",
-                    email: "legacy@example.com",
-                    name: "Legacy User",
-                    username: "legacy_user",
+                    id: "valid-1",
+                    organizationId: 99,
+                    userType: "manager",
+                    email: "valid@example.com",
+                    name: "Valid User",
+                    username: "valid_user",
                 },
             });
 
             const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
 
-            expect(result).toEqual({
-                user: {
-                    id: "legacy-1",
-                    email: "legacy@example.com",
-                    name: "Legacy User",
-                    username: "legacy_user",
-                    organizationId: 4,
-                    userType: "admin",
-                },
-            });
-        });
-
-        it("falls back to sub for legacy payloads missing a user id", async () => {
-            mockJwtVerify.mockResolvedValueOnce({
-                payload: { sub: "legacy-sub", organizationId: 4, userType: "admin" },
-            });
-
-            const result = await getProxySession(makeRequest("better-auth.session_data=tok"));
-
-            expect(result).toEqual({
-                user: {
-                    id: "legacy-sub",
-                    email: undefined,
-                    name: undefined,
-                    username: undefined,
-                    organizationId: 4,
-                    userType: "admin",
-                },
-            });
+            expect(result).not.toBeNull();
+            expect(result).toHaveProperty("user.id");
+            expect(typeof result?.user.id).toBe("string");
+            expect(typeof result?.user.organizationId).toBe("number");
+            expect(typeof result?.user.userType).toBe("string");
         });
     });
 });

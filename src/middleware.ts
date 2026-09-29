@@ -117,7 +117,8 @@ export default async function proxy(req: Request) {
     }
 
     if (isLoggedIn && isAuthLandingRoute) {
-        return NextResponse.redirect(new URL("/no-apps", req.url));
+        // Redirect authenticated users to dashboard instead of no-apps
+        return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
     if (isAdminRoute && userType !== "admin") {

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { CleanMinimalSignIn } from "@/components/auth/clean-minimal-sign-in";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { legacySignInAction } from "@/actions/auth";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -34,32 +33,11 @@ export default function LoginPage() {
             });
 
             if (result.error) {
-                const legacyResult = await legacySignInAction(
-                    normalizedUsername,
-                    password
-                );
-
-                if (legacyResult.success) {
-                    const retry = await authClient.signIn.username({
-                        username: normalizedUsername,
-                        password,
-                    });
-
-                    if (retry.error) {
-                        setError("Invalid username or password");
-                        toast.error("Invalid username or password");
-                    } else {
-                        toast.success("Logged in successfully");
-                        router.push("/no-apps");
-                        router.refresh();
-                    }
-                } else {
-                    setError("Invalid username or password");
-                    toast.error("Invalid username or password");
-                }
+                setError("Invalid username or password");
+                toast.error("Invalid username or password");
             } else {
                 toast.success("Logged in successfully");
-                router.push("/no-apps");
+                router.push("/dashboard");
                 router.refresh();
             }
         } catch {
@@ -71,7 +49,7 @@ export default function LoginPage() {
     };
     const signInWithGoogle = async () => {
         try {
-            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/no-apps" });
+            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" });
             if (result.error) {
                 setError("Could not sign in with Google");
                 toast.error("Could not sign in with Google");

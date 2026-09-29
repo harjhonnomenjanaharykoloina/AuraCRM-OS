@@ -42,7 +42,7 @@ export default function RegisterPage() {
     };
     const signUpWithGoogle = async () => {
         try {
-            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/no-apps" });
+            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" });
             if (result.error) {
                 setError("Could not sign up with Google");
                 toast.error("Could not sign up with Google");

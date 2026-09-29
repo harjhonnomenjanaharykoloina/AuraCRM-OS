@@ -7,12 +7,15 @@ export async function POST(req: Request) {
         return await handlers.POST(req);
     } catch (e: any) {
         const err = e?.cause ? e.cause : e;
-        console.error("[auth POST error]", err?.stack || err);
+        // Log detailed error internally but don't expose to client
+        console.error("[auth POST error]", err);
+        
+        // Return generic error message in production
+        const isProduction = process.env.NODE_ENV === "production";
         return new Response(
             JSON.stringify({
                 status: 500,
-                error: err?.message ?? "Internal error",
-                stack: err?.stack,
+                error: isProduction ? "Internal server error" : err?.message ?? "Internal error",
             }),
             {
                 status: 500,
