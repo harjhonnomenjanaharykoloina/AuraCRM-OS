@@ -17,7 +17,7 @@
     },
     "worker": {
       "build": {
-        "dockerfilePath": "Dockerfile"
+        "dockerfilePath": "worker.Dockerfile"
       },
       "runCommand": "node dist/worker.js",
       "restart": "on-failure"
