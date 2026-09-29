@@ -37,7 +37,7 @@ export default function LoginPage() {
                 toast.error("Invalid username or password");
             } else {
                 toast.success("Logged in successfully");
-                router.push("/dashboard");
+                router.push("/no-apps");
                 router.refresh();
             }
         } catch {
@@ -49,7 +49,7 @@ export default function LoginPage() {
     };
     const signInWithGoogle = async () => {
         try {
-            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/dashboard" });
+            const result = await authClient.signIn.social({ provider: "google", callbackURL: "/no-apps" });
             if (result.error) {
                 setError("Could not sign in with Google");
                 toast.error("Could not sign in with Google");

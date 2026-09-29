@@ -139,8 +139,11 @@ export default async function proxy(req: Request) {
     }
 
     if (isLoggedIn && isAuthLandingRoute) {
-        // Redirect authenticated users to dashboard instead of no-apps
-        return NextResponse.redirect(new URL("/dashboard", req.url));
+        // Redirect authenticated users to the setup dashboard: there is no top-level
+        // /dashboard route (the only dashboard is /app/[appApiName]/dashboard), so
+        // redirecting there 404s. /no-apps is the real landing page and is what
+        // middleware.test.ts expects.
+        return NextResponse.redirect(new URL("/no-apps", req.url));
     }
 
     if (isAdminRoute && userType !== "admin") {
