@@ -354,6 +354,13 @@ export const betterAuthInstance = betterAuth({
                     // Only provision org if the user doesn't already have one
                     // (The custom register() action sets organizationId directly via Prisma,
                     //  so this hook only fires for OAuth/email-OTP/BetterAuth-native sign-ups)
+                    // Remove the id field if present to let the database auto-generate it
+                    // @ts-ignore: We're checking if the property exists before deleting
+                    if (('id' in data) && data.id !== undefined) {
+                        // @ts-ignore: We're deleting a property we just confirmed exists
+                        delete (data as any).id;
+                    }
+
                     if (!data.organizationId) {
                         const email = data.email ?? "";
                         const orgName = email
