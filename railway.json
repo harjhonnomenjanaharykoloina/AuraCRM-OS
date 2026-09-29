@@ -19,7 +19,7 @@
       "build": {
         "dockerfilePath": "Dockerfile"
       },
-      "runCommand": "pnpm run jobs:worker",
+      "runCommand": "node dist/worker.js",
       "restart": "on-failure"
     }
   },

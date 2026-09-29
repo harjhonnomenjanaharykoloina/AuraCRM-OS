@@ -21,6 +21,8 @@ COPY . .
 
 RUN npx prisma generate
 
+RUN pnpm run build:worker
+
 # Build-time secrets are passed as build args, never baked into the final image.
 # In production, supply real values via --build-arg JWT_SECRET=... --build-arg BETTER_AUTH_SECRET=...
 ARG JWT_SECRET="build-time-not-valid-for-production"
@@ -58,6 +60,8 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 RUN npx prisma generate
+
+COPY --from=builder /app/dist/worker.js ./dist/worker.js
 
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
